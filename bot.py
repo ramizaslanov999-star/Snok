@@ -37,7 +37,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 WELCOME_CHANNEL_ID = int(os.getenv('WELCOME_CHANNEL_ID'))
 
 # ========== BOTUN KİŞİLİĞİ ==========
-ABI_ID = 1471063348689768523  # Rkiaoni'nin Discord ID'si
+ABI_ID = 423889250052734986  # Rkiaoni'nin Discord ID'si
 ABI_ADI = "Rkiaoni"
 
 # Cooldown için sözlük (her kullanıcının son mesaj zamanı)
@@ -422,3 +422,4 @@ if __name__ == "__main__":
         print(f'⏱️ Cooldown: 5 dakika (300 saniye)')
         print(f'🎲 Cevap ihtimali: %40')
         bot.run(token)
+
