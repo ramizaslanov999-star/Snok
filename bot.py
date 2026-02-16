@@ -1,7 +1,15 @@
+import discord
+from discord.ext import commands
 import os
+from dotenv import load_dotenv
+import random
+import asyncio
+import time
+from datetime import datetime
 from flask import Flask
 import threading
 
+# ===== WEB SUNUCUSU (Render için) =====
 app = Flask(__name__)
 
 @app.route('/')
@@ -13,14 +21,7 @@ def run_web():
     app.run(host='0.0.0.0', port=port)
 
 threading.Thread(target=run_web, daemon=True).start()
-import discord
-from discord.ext import commands
-import os
-from dotenv import load_dotenv
-import random
-import asyncio
-import time
-from datetime import datetime
+# ===== WEB SUNUCUSU BİTTİ =====
 
 # .env dosyasını yükle
 load_dotenv()
@@ -37,7 +38,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 WELCOME_CHANNEL_ID = int(os.getenv('WELCOME_CHANNEL_ID'))
 
 # ========== BOTUN KİŞİLİĞİ ==========
-ABI_ID = 423889250052734986  # Rkiaoni'nin Discord ID'si
+ABI_ID = 1471063348689768523  # Rkiaoni'nin Discord ID'si
 ABI_ADI = "Rkiaoni"
 
 # Cooldown için sözlük (her kullanıcının son mesaj zamanı)
@@ -140,8 +141,8 @@ async def on_ready():
     
     await bot.change_presence(
         activity=discord.Activity(
-            type=discord.ActivityType.competing, 
-            name="En tatlı bot olmaya 🏆 "
+            type=discord.ActivityType.listening, 
+            name="Abimi | 5 dk cooldown 💕"
         )
     )
     print('🌟 Bot hazır ve nazır!')
@@ -158,7 +159,6 @@ async def on_member_join(member):
 
 @bot.event
 async def on_message(message):
-    """Her mesajda çalışır"""
     if message.author.bot:
         return
     
@@ -171,23 +171,22 @@ async def on_message(message):
         current_time = time.time()
         
         # ===== COOLDOWN KONTROLÜ =====
-        # Abi'ye cooldown yok! (abi istediği kadar konuşabilir)
+        # Abi'ye cooldown yok!
         if not is_abi:
-            # Diğer kullanıcılar için 5 dakika cooldown (300 saniye)
+            # Diğer kullanıcılar için 5 dakika cooldown
             if message.author.id in user_cooldown:
                 if current_time - user_cooldown[message.author.id] < 300:
-                    # Cooldown'da olan kullanıcıya sadece komutları işle, sohbet cevabı verme
                     await bot.process_commands(message)
                     return
-            # Cooldown süresini güncelle
             user_cooldown[message.author.id] = current_time
             
-            # %40 ihtimalle cevap ver (kanalı şişirmemek için)
+            # %40 ihtimalle cevap ver
             if random.random() > 0.4:
                 await bot.process_commands(message)
                 return
         
-        # Komik kelime kontrolü (gülme tepkisi) - herkese açık
+        # Komik kelime kontrolü (gülme tepkisi)
+        cevap_verildi = False
         for kelime in komik_kelimeler:
             if kelime in mesaj:
                 await message.add_reaction('😂')
@@ -195,20 +194,22 @@ async def on_message(message):
                 await message.add_reaction('🤣')
                 break
         
-        # Her mesaja tatlı bir tepki - herkese açık
+        # Her mesaja tatlı bir tepki
         await message.add_reaction('💖')
         
         # ===== ABİ'YE ÖZEL KONUŞMALAR =====
-        if is_abi:
+        if is_abi and not cevap_verildi:
             # Abi nasılsın?
             if any(kelime in mesaj for kelime in ["nasılsın", "naber", "n'aber", "ne haber"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(nasilsin_abi))
+                cevap_verildi = True
             
             # Abi selam
             elif any(kelime in mesaj for kelime in ["selam", "merhaba", "hi", "hello", "slm"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(selamlar_abi))
+                cevap_verildi = True
             
             # Abi aşk
             elif any(kelime in mesaj for kelime in ["seni seviyorum", "aşkım", "love", "seviyorum"]):
@@ -216,6 +217,7 @@ async def on_message(message):
                 await message.reply("Abi ben de seni seviyorum! (kardeşçe) 💖")
                 await message.add_reaction('💕')
                 await message.add_reaction('💖')
+                cevap_verildi = True
             
             # Abi ne yapıyorsun?
             elif any(kelime in mesaj for kelime in ["ne yapıyorsun", "napıyorsun", "ne yapiyorsun"]):
@@ -227,33 +229,39 @@ async def on_message(message):
                     "Abi rüya görüyordum, içinde sen vardın! 🌙",
                     f"Abi {ABI_ADI}'yi düşünüyordum, o geldi aklıma 💭"
                 ]))
+                cevap_verildi = True
             
             # Abi tatlısın
             elif any(kelime in mesaj for kelime in ["tatlısın", "tatlı abi", "iyi abi", "güzel abi"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(tatli_sozler_abi))
                 await message.add_reaction('🥰')
+                cevap_verildi = True
             
             # Abi özel komut
             elif "abi" in mesaj and ("komik" in mesaj or "şaka" in mesaj):
                 await asyncio.sleep(1)
                 await message.reply(f"Abi sen zaten çok komiksin, şaka yapmana gerek yok! 😄")
+                cevap_verildi = True
             
             elif "abi" in mesaj and "güldür" in mesaj:
                 await asyncio.sleep(1)
                 await message.reply(f"Abi seni güldürmek benim görevim! {random.choice(komik_cevaplar)}")
+                cevap_verildi = True
         
         # ===== NORMAL KULLANICILAR =====
-        else:
+        elif not cevap_verildi:
             # Nasılsın?
             if any(kelime in mesaj for kelime in ["nasılsın", "naber", "n'aber", "ne haber"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(nasilsin_normal))
+                cevap_verildi = True
             
             # Selam
             elif any(kelime in mesaj for kelime in ["selam", "merhaba", "hi", "hello", "slm"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(selamlar_normal))
+                cevap_verildi = True
             
             # Aşk
             elif any(kelime in mesaj for kelime in ["seni seviyorum", "aşkım", "love", "seviyorum"]):
@@ -261,6 +269,7 @@ async def on_message(message):
                 await message.reply("Ben de seni seviyorum! (Platonik olarak tabi) 💖")
                 await message.add_reaction('💕')
                 await message.add_reaction('💖')
+                cevap_verildi = True
             
             # Ne yapıyorsun?
             elif any(kelime in mesaj for kelime in ["ne yapıyorsun", "napıyorsun", "ne yapiyorsun"]):
@@ -272,18 +281,21 @@ async def on_message(message):
                     "Rüya görüyorum, içinde sen varsın! 🌙",
                     "Seni düşünüyordum, iyi ki varsın! 💕"
                 ]))
+                cevap_verildi = True
             
             # Komik şeyler
             elif any(kelime in mesaj for kelime in ["komik", "güldür", "şaka", "espiri"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(komik_cevaplar))
                 await message.add_reaction('😄')
+                cevap_verildi = True
             
             # Tatlısın
             elif any(kelime in mesaj for kelime in ["tatlısın", "tatlı bot", "iyi bot", "güzel bot"]):
                 await asyncio.sleep(1)
                 await message.reply(random.choice(tatli_sozler_normal))
                 await message.add_reaction('🥰')
+                cevap_verildi = True
     
     # Komutları işle
     await bot.process_commands(message)
@@ -422,4 +434,3 @@ if __name__ == "__main__":
         print(f'⏱️ Cooldown: 5 dakika (300 saniye)')
         print(f'🎲 Cevap ihtimali: %40')
         bot.run(token)
-
