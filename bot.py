@@ -141,8 +141,8 @@ async def on_ready():
     
     await bot.change_presence(
         activity=discord.Activity(
-            type=discord.ActivityType.listening, 
-            name="Abimi | 5 dk cooldown 💕"
+            type=discord.ActivityType.competing, 
+            name="En tatlı bot olmak için 🏆"
         )
     )
     print('🌟 Bot hazır ve nazır!')
@@ -434,3 +434,4 @@ if __name__ == "__main__":
         print(f'⏱️ Cooldown: 5 dakika (300 saniye)')
         print(f'🎲 Cevap ihtimali: %40')
         bot.run(token)
+
