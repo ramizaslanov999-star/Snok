@@ -28,14 +28,15 @@ def veritabani_kaydet(veri):
 
 # ===== WEB SUNUCUSU (Render için) =====
 app = Flask(__name__)
+app.debug = False  # Debug modu KAPALI (çift mesajı engeller)
 
 @app.route('/')
 def home():
-    return "Bot calisiyor! SNOK v3.0"
+    return "Bot calisiyor! SNOK v3.0 - Süper Tatlı Mod 🍬"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=False)
 
 threading.Thread(target=run_web, daemon=True).start()
 # ===== WEB SUNUCUSU BİTTİ =====
@@ -106,7 +107,6 @@ def isim_ogrenme_kontrolu(text):
     """Kullanıcı ismini söylüyor mu kontrol eder"""
     text_lower = text.lower()
     
-    # Basit pattern'ler
     if 'adım' in text_lower or 'benim adım' in text_lower or 'mənim adım' in text_lower:
         kelimeler = text_lower.split()
         for i, kelime in enumerate(kelimeler):
@@ -220,39 +220,70 @@ async def level(ctx, member: discord.Member = None):
 
     await ctx.send(embed=embed)
 
-# ===== YARDIM KOMUTU =====
-@bot.command(name='yardım', aliases=['kömək', 'yrd'])
+# ===== YARDIM KOMUTU - TATLI VERSİYON =====
+@bot.command(name='yardım', aliases=['kömək', 'yrd', 'help'])
 async def yardim(ctx):
     lang = detect_language(ctx.message.content)
 
     if lang == 'tr':
         embed = discord.Embed(
-            title="📚 SNOK Bot Yardım Menüsü",
-            description="Merhaba! Ben SNOK, sana nasıl yardımcı olabilirim?",
-            color=discord.Color.green()
+            title="🌸 **SNOK Bot Yardım Menüsü** 🌸",
+            description=(
+                "✨ **Merhaba! Ben SNOK, sana nasıl yardımcı olabilirim?** ✨\n\n"
+                "🍭 **Komutlarım:**\n"
+                "• `!level` - Seviye bilgisini gösterir (şu an çalışmıyor ⚠️)\n"
+                "• `!yardım` - Bu tatlı menüyü gösterir 🎀\n\n"
+                "💬 **Sohbet Özelliklerim:**\n"
+                "• Bana `snok` yazarak seslenebilirsin\n"
+                "• Adını söylersen seni tanırım! (örn: 'Benim adım Ali')\n"
+                "• İsmini unutmam, veritabanıma kaydederim 📝\n"
+                "• Hızlı mesaj atarsan seni tatlı dille uyarırım 🍬\n"
+                "• Büyük harfle yazarsan sesimin kısıldığını söylerim 🔇\n"
+                "• Küfür edersen üzülürüm 🥺\n\n"
+                "🌺 **Sorabileceğin Şeyler:**\n"
+                "• Nerelisin? • Kaç yaşındasın? • Evli misin?\n"
+                "• Bot musun? • Adın ne? • Ne yapıyorsun?\n\n"
+                "💫 **2 Dil Biliyorum:** Türkçe & Azərbaycanca"
+            ),
+            color=discord.Color.pink()
         )
-        embed.add_field(name="!level [@kullanıcı]", value="Seviye bilgisini gösterir (şu an çalışmıyor ⚠️)", inline=False)
-        embed.add_field(name="!yardım", value="Bu menüyü gösterir", inline=False)
-        embed.add_field(name="💬 Sohbet", value="Benimle konuşabilirsin! Ne sormak istersin?", inline=False)
-        embed.add_field(name="📝 İsim Öğrenme", value="Bana adını söyle, seni tanıyayım! ('Benim adım Ali' gibi)", inline=False)
-        embed.set_footer(text="SNOK v3.0 - Süper Akıllı | Türkçe & Azərbaycanca")
+        embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
+        embed.set_footer(text="SNOK v3.0 - Süper Tatlı Mod 💖", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
     else:
         embed = discord.Embed(
-            title="📚 SNOK Bot Yardım Menüsü",
-            description="Salam! Mən SNOK, sənə necə kömək edə bilərəm?",
-            color=discord.Color.green()
+            title="🌸 **SNOK Bot Kömək Menüsü** 🌸",
+            description=(
+                "✨ **Salam! Mən SNOK, sənə necə kömək edə bilərəm?** ✨\n\n"
+                "🍭 **Komandalarım:**\n"
+                "• `!səviyyə` - Səviyyə məlumatını göstərir (hal-hazırda işləmir ⚠️)\n"
+                "• `!kömək` - Bu şirin menünü göstərir 🎀\n\n"
+                "💬 **Söhbət Xüsusiyyətlərim:**\n"
+                "• Mənə `snok` yazaraq səslənə bilərsən\n"
+                "• Adını söyləsən səni tanıyıram! (məs: 'Mənim adım Əli')\n"
+                "• Adını unutmaram, verilənlər bazama qeyd edərəm 📝\n"
+                "• Sürətli mesaj yazsan səni şirin dillə xəbərdar edərəm 🍬\n"
+                "• Böyük hərflə yazsan səsimin kısıldığını deyərəm 🔇\n"
+                "• Söyüş etsən üzülərəm 🥺\n\n"
+                "🌺 **Soruşa Biləcəyin Şeylər:**\n"
+                "• Hardasan? • Neçə yaşın var? • Evli sən?\n"
+                "• Botsan? • Adın nə? • Nə edirsən?\n\n"
+                "💫 **2 Dil Bilirəm:** Türkçə & Azərbaycanca"
+            ),
+            color=discord.Color.pink()
         )
-        embed.add_field(name="!səviyyə [@istifadəçi]", value="Səviyyə məlumatını göstərir (hal-hazırda işləmir ⚠️)", inline=False)
-        embed.add_field(name="!kömək", value="Bu menyunu göstərir", inline=False)
-        embed.add_field(name="💬 Söhbət", value="Mənimlə danışa bilərsən! Nə soruşmaq istəyirsən?", inline=False)
-        embed.add_field(name="📝 Ad Öyrənmə", value="Mənə adını söylə, səni tanıyım! ('Mənim adım Əli' kimi)", inline=False)
-        embed.set_footer(text="SNOK v3.0 - Super Ağıllı | Türkçə & Azərbaycanca")
+        embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
+        embed.set_footer(text="SNOK v3.0 - Super Şirin Mod 💖", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
 
     await ctx.send(embed=embed)
 
 # ===== ON_MESSAGE (ANA OLAY) =====
 @bot.event
 async def on_message(message):
+    # ÇİFT MESAJ ENGELLEME - Bu mesaj daha önce işlendiyse atla
+    if hasattr(message, 'snok_processed'):
+        return
+    message.snok_processed = True
+    
     if message.author.bot:
         return
 
@@ -314,7 +345,7 @@ async def on_message(message):
     )
     
     if bot_cagrildi:
-        emojiler = ['😊', '🥰', '🤗', '😘', '✨', '💫', '🌸', '🍬', '🍭', '🎀']
+        emojiler = ['😊', '🥰', '🤗', '😘', '✨', '💫', '🌸', '🍬', '🍭', '🎀', '💖', '💕']
         emoji = random.choice(emojiler)
         
         if kayitli_isim:
@@ -339,5 +370,11 @@ if __name__ == "__main__":
     if not token:
         print("HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
-        print("SNOK v3.0 başlatılıyor... Süper Akıllı Mod Aktif! 🚀")
+        print("🌸 SNOK v3.0 başlatılıyor... Süper Tatlı Mod Aktif! 🍭")
+        print("✨ Bot şu özelliklerle çalışıyor:")
+        print("   • İsim öğrenme ve hatırlama 📝")
+        print("   • Spam koruması 🛡️")
+        print("   • Küfür engeli 🥺")
+        print("   • Çoklu dil desteği (Türkçe & Azərbaycanca) 🌍")
+        print("   • Render'da 7/24 çalışmaya hazır! 🚀")
         bot.run(token)
