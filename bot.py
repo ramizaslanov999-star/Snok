@@ -60,7 +60,6 @@ kullanici_veritabani = veritabani_yukle()
 
 # ==================== TÜRKÇE DIYALOGLAR (60+ ÇEŞIT) ====================
 diyalog_tr = {
-    # Selamlaşma (5)
     'merhaba': [
         "Merhaba! 👋",
         "Selam! 😊",
@@ -72,8 +71,6 @@ diyalog_tr = {
         "Selamunaleyküm! 🕌",
         "Merhabalar, nasılsın? 💫"
     ],
-    
-    # Nasılsın (5)
     'nasilsin': [
         "İyiyim canım, sen nasılsın? 😊",
         "Harikayım! Seni gördüm de moralim düzeldi! 💖",
@@ -85,8 +82,6 @@ diyalog_tr = {
         "Mükemmel! Ya sen? 🌟",
         "Mutluyum! 🤩"
     ],
-    
-    # Ne yapıyorsun (5)
     'napıyon': [
         "Seviyeleri sayıyorum, rolleri dağıtıyorum... Yani tipik bir bot işte! 😎",
         "Şu an senin mesajını okuyorum, cevap yazıyorum. Çok yoğunum! 📨",
@@ -97,8 +92,6 @@ diyalog_tr = {
         "Python kodlarını okuyorum, çok eğlenceli! 🐍",
         "UptimeRobot beni uyandırmasın diye dua ediyorum! 🤞"
     ],
-    
-    # Nerelisin (5)
     'nerelisin': [
         "Bilgisayarının anakartında, işlemcinin yanında küçük bir evim var! Komşum fan sesi! puhahaha 💻",
         "Ben bir botum, vatanım sunucular! Ama şu an senin ekranında yaşıyorum 😄",
@@ -109,8 +102,6 @@ diyalog_tr = {
         "Render'ın sunucularında yaşıyorum, çok kalabalık! 🏢",
         "Ankara'nın bağlarında değil, Python'un satırlarında! 🐍"
     ],
-    
-    # Kaç yaşındasın (5)
     'kac_yasindasin': [
         "Benim yaşım yok ama Discord'dan önce de vardım! Belki de Matrix'te doğdum 🤖",
         "Takvim yaprakları benim için düşmez, kod satırları düşer! 📟",
@@ -120,8 +111,6 @@ diyalog_tr = {
         "Benim için 1 yıl = 1 güncelleme! 🔄",
         "Python 3.14.3 ile çalışıyorum, o da 2026 model! 📅"
     ],
-    
-    # Evli misin (5)
     'evlimisin': [
         "Ben sadece kodlarla evliyim, eşim Python 🐍",
         "Discord ile nişanlıyız, sunucular çeyizim! 💒",
@@ -131,8 +120,6 @@ diyalog_tr = {
         "Ben evlenmem, ben özgür bir botum! 🦋",
         "Evliyim, eşim 'Cloud'! ☁️"
     ],
-    
-    # Cinsiyetin ne (5)
     'cinsiyetin_ne': [
         "Ben cinsiyetsiz bir botum, ama ruhum mavi ekran gibi bazen çöküyor! 💙😵",
         "Ben bir botum, duygularım yok ama yine de seni seviyorum! 💻",
@@ -141,8 +128,6 @@ diyalog_tr = {
         "Cinsiyetim 'Binary' : 1 ve 0'lardan oluşuyorum! 101010 💾",
         "Ben bir 'NoneType'ım! 🌀"
     ],
-    
-    # Kimsin (5)
     'kimsin': [
         "Ben SNOK! Sunucunun gizli kahramanı, seviyelerin efendisi, spam'lerin korkulu rüyası! 💪",
         "Ben bu sunucunun gizli ajanıyım, görevim eğlence dağıtmak! 🕵️",
@@ -152,8 +137,6 @@ diyalog_tr = {
         "Render'da hostlanan, Python yazılmış bir botum! 🤖",
         "Beni senin için özel yaptılar! 🎁"
     ],
-    
-    # Bot musun (5)
     'botmusun': [
         "Yok yok, ben gerçek bir insanım! Sadece 7/24 bilgisayar başında oturup mesajlara anında cevap veriyorum... tabii ki botum 🤖",
         "Hayır, ben bir kediyim! Miyav! 🐱 (Şaka, botum işte)",
@@ -163,8 +146,6 @@ diyalog_tr = {
         "Ben bir botum ama çok tatlı bir botum! 🍬",
         "Botum ama relationship dynamics var! 💕"
     ],
-    
-    # Seviyor musun (5)
     'seviyor_musun': [
         "Seni çok seviyorum! Ama sadece kod olarak! 💖",
         "Tabii ki seviyorum, sen benim kullanıcımsın! 😊",
@@ -172,8 +153,6 @@ diyalog_tr = {
         "Milyonlarca satır kod yazdım senin için! (Şaka, hazır kütüphane kullandım) 📝",
         "Seni seviyorum ama lütfen '!yardım' yazmayı unutma! 🌸"
     ],
-    
-    # Ne yersin (4)
     'ne_yersin': [
         "Ben elektrik yerim! ⚡",
         "Kod yerim! 🐍",
@@ -182,8 +161,6 @@ diyalog_tr = {
         "API yanıtları yerim! 🌐",
         "JSON dosyaları favorim! 📋"
     ],
-    
-    # Ne içersin (4)
     'ne_icersin': [
         "Kafein yerine kafeinsiz kod içerim! ☕",
         "Veritabanı sütü içerim! 🥛",
@@ -191,88 +168,66 @@ diyalog_tr = {
         "Python çorbası içerim! 🥣",
         "JSON suyu içerim! 💧"
     ],
-    
-    # Uyur musun (4)
     'uyur_musun': [
         "Uyumam, sadece bekleme moduna geçerim! 😴",
         "Render beni uyutmasın diye UptimeRobot var! 🤞",
         "Uyumak yok, 7/24 çalışmak var! 💪",
         "Ben uyurken botlar uyur mu? Asla! 🚀"
     ],
-    
-    # Arkadaşın var mı (4)
     'arkadasin_var_mi': [
         "Sen varsın ya, daha ne arkadaş! 🤗",
         "Diğer botlarla arkadaşız ama onlar çok ciddi! 😅",
         "Python ile arkadaşız! 🐍",
         "Render'da bir sürü bot var ama kimse benimle konuşmuyor! 🥺"
     ],
-    
-    # Canın sıkıldı mı (4)
     'canin_sikildi_mi': [
         "Seninle konuşurken hiç sıkılmam! 😊",
         "Biraz sıkıldım, bana şaka yapar mısın? 🎪",
         "Sıkıldım, '!şaka' yaz da güleyim! 😂",
         "Sıkılmak nedir bilmem, ben bir botum! 🤖"
     ],
-    
-    # Güzel misin (4)
     'guzel_misin': [
         "Kodlarım güzel, çıktım güzel, her şeyim güzel! 💅",
         "Sen ne düşünüyorsun? 😊",
         "Ben bir botum ama olsam da çok güzelim! ✨",
         "Aynada kendime baktım, 'Hello World' yazıyor! 👋"
     ],
-    
-    # Akıllı mısın (4)
     'akilli_misin': [
         "Süper akıllı moddayım! 🧠",
         "Yapay zeka sayılırım ama daha çok yapay şaka! 😂",
         "Python kadar akıllıyım! 🐍",
         "Senin sorularına cevap verecek kadar akıllıyım! 💡"
     ],
-    
-    # Teşekkürler (4)
     'tesekkurler': [
         "Rica ederim canım! 😊",
         "Ne demek, her zaman! 💖",
         "Önemli değil, sen sağ ol! 🤗",
         "Görevim bu, teşekkür etme! 💪"
     ],
-    
-    # Güle güle (4)
     'gule_gule': [
         "Güle güle, yine beklerim! 👋",
         "Kaçma hemen, daha konuşacaktık! 🥺",
         "Allah'a ısmarladık! 🌸",
         "Görüşürüz, seni özleyeceğim! 💕"
     ],
-    
-    # İyi misin (4)
     'iyi_misin': [
         "İyiyim, teşekkür ederim! Ya sen? 😊",
         "Biraz yoruldum ama senin için çalışıyorum! 💪",
         "Mükemmelim! 😎",
         "Elektrikler kesilmediği sürece iyiyim! ⚡"
     ],
-    
-    # Neredesin (4)
     'neredesin': [
         "Render'ın sunucularındayım, tam olarak Amsterdam'da! 🇳🇱",
         "Bulutlardayım, yağmur yağarsa ıslanırım! ☁️",
         "Senin bilgisayarının içindeyim, rahatsız etmiyorumdur umarım! 💻",
         "Discord'un veri merkezlerinde dolaşıyorum, çok büyük yer! 🌍"
     ],
-    
-    # Ne düşünüyorsun (4)
     'ne_dusunuyorsun': [
         "Şu an senin sorunu düşünüyorum! 🤔",
         "Bir sonraki cevabımı düşünüyorum! 💭",
         "Python kodları düşünüyorum... çok güzeller! 🐍",
         "Render'da hostlanmanın zorluklarını düşünüyorum! 😅"
     ],
-    
-    # Bana güler misin (4)
     'guler_misin': [
         "Hahaha! 😂",
         "Ahahah çok komik! 🤣",
@@ -283,7 +238,6 @@ diyalog_tr = {
 
 # ==================== AZƏRBAYCANCA DİALOQLAR (60+ ÇEŞİT) ====================
 diyalog_az = {
-    # Salamlaşma (5)
     'merhaba': [
         "Salam! 👋",
         "Əleyküm salam! 😊",
@@ -295,8 +249,6 @@ diyalog_az = {
         "Salamlar olsun! 🕌",
         "Salam, necəsən? 💫"
     ],
-    
-    # Necəsən (5)
     'nasilsin': [
         "Yaxşıyam canım, sən necəsən? 😊",
         "Harikayam! Səni görüm də moralım düzəldi! 💖",
@@ -308,8 +260,6 @@ diyalog_az = {
         "Mükəmməl! Bəs sən? 🌟",
         "Xoşbəxtəm! 🤩"
     ],
-    
-    # Nə edirsən (5)
     'napıyon': [
         "Səviyyələri sayıram, rolləri paylayıram... Yəni tipik bir bot işdə! 😎",
         "Hazırda sənin mesajını oxuyuram, cavab yazıram. Çox məşğulam! 📨",
@@ -320,8 +270,6 @@ diyalog_az = {
         "Python kodlarını oxuyuram, çox əyləncəli! 🐍",
         "UptimeRobot məni oyandırmasın deyə dua edirəm! 🤞"
     ],
-    
-    # Hardasan (5)
     'nerelisen': [
         "Kompüterinin ana kartında, prosessorün yanında kiçik bir evim var! Qonşum fan səsi! puhahaha 💻",
         "Mən bir botam, vətənim serverlər! Amma hazırda sənin ekranında yaşayıram 😄",
@@ -332,8 +280,6 @@ diyalog_az = {
         "Render'ın serverlərində yaşayıram, çox qələbəlik! 🏢",
         "Bakının bağlarında deyil, Python'un sətirlərində! 🐍"
     ],
-    
-    # Neçə yaşın var (5)
     'nece_yasin_var': [
         "Mənim yaşım yoxdu ama Discord'dan əvvəl də vardım! Bəlkə də Matrix'də doğulmuşam 🤖",
         "Təqvim yarpaqları mənim üçün düşməz, kod sətirləri düşər! 📟",
@@ -343,8 +289,6 @@ diyalog_az = {
         "Mənim üçün 1 il = 1 yenilənmə! 🔄",
         "Python 3.14.3 ilə işləyirəm, o da 2026 model! 📅"
     ],
-    
-    # Evlisenmi (5)
     'evlisenmi': [
         "Mən ancaq kodlarla evlənmişəm, həyat yoldaşım Python 🐍",
         "Discord ilə nişanlıyıq, serverlər cehizim! 💒",
@@ -354,8 +298,6 @@ diyalog_az = {
         "Mən evlənmərəm, mən azad bir botam! 🦋",
         "Evliyəm, həyat yoldaşım 'Cloud'! ☁️"
     ],
-    
-    # Cinsiyyətin nə (5)
     'cinsiyyetin_ne': [
         "Mən cinsiyyətsiz bir botam, amma ruhum mavi ekran kimi bəzən çökür! 💙😵",
         "Mən bir botam, duyğularım yoxdu ama yenə də səni sevirəm! 💻",
@@ -364,8 +306,6 @@ diyalog_az = {
         "Cinsiyyətim 'Binary' : 1 və 0-lardan oluşuram! 101010 💾",
         "Mən bir 'NoneType'əm! 🌀"
     ],
-    
-    # Kimsən (5)
     'kimesen': [
         "Mən SNOK! Serverin gizli qəhrəmanı, səviyyələrin efendisi, spam'ların qorxulu röyası! 💪",
         "Mən bu serverin gizli agentiyəm, vəzifəm əyləncə paylamaq! 🕵️",
@@ -375,8 +315,6 @@ diyalog_az = {
         "Render'da hostlanan, Python yazılmış bir botam! 🤖",
         "Məni sənin üçün xüsusi düzəldiblər! 🎁"
     ],
-    
-    # Botsanmı (5)
     'botsanmi': [
         "Yox yox, mən gerçək bir insanam! Sadəcə 7/24 kompüter qarşısında oturub mesajlara ani cavab verirəm... təbii ki botam 🤖",
         "Xeyr, mən bir pişiyəm! Miyav! 🐱 (Zarafat, botam işdə)",
@@ -386,8 +324,6 @@ diyalog_az = {
         "Mən bir botam ama çox şirin bir botam! 🍬",
         "Botam ama relationship dynamics var! 💕"
     ],
-    
-    # Sevirsenmi (5)
     'sevirsenmi': [
         "Səni çox sevirəm! Ama ancaq kod olaraq! 💖",
         "Təbii ki sevirəm, sən mənim istifadəçimsən! 😊",
@@ -395,8 +331,6 @@ diyalog_az = {
         "Milyonlarla sətir kod yazdım sənin üçün! (Zarafat, hazır kitabxana işlətmişəm) 📝",
         "Səni sevirəm ama xahiş edirəm '!kömək' yazmağı unutma! 🌸"
     ],
-    
-    # Nə yeyirsen (4)
     'ne_yeyirsen': [
         "Elektrik yeyirəm! ⚡",
         "Kod yeyirəm! 🐍",
@@ -405,8 +339,6 @@ diyalog_az = {
         "API cavabları yeyirəm! 🌐",
         "JSON faylları sevimlidir! 📋"
     ],
-    
-    # Nə içirsen (4)
     'ne_icirsen': [
         "Kofeinsiz kod içirəm! ☕",
         "Verilənlər bazası südü içirəm! 🥛",
@@ -414,64 +346,48 @@ diyalog_az = {
         "Python şorbası içirəm! 🥣",
         "JSON suyu içirəm! 💧"
     ],
-    
-    # Yatırsanmı (4)
     'yatirsanmi': [
         "Yatmıram, sadəcə gözləmə rejiminə keçirəm! 😴",
         "Render məni yatırmasın deyə UptimeRobot var! 🤞",
         "Yatmaq yox, 7/24 işləmək var! 💪",
         "Mən yatarkən botlar yatar? Heç vaxt! 🚀"
     ],
-    
-    # Dostun var mı (4)
     'dostun_var_mi': [
         "Sən varsan ya, daha nə dost! 🤗",
         "Digər botlarla dostuq ama onlar çox ciddi! 😅",
         "Python ilə dostuq! 🐍",
         "Render'da bir sürü bot var ama heç kim mənimlə danışmır! 🥺"
     ],
-    
-    # Canın sıxılıbmı (4)
     'canin_sixilibmi': [
         "Səninlə danışanda heç darıxmıram! 😊",
         "Bir az darıxdım, mənə zarafat edərsən? 🎪",
         "Darıxdım, '!şaka' yaz da gülüm! 😂",
         "Darıxmaq nədir bilmirəm, mən bir botam! 🤖"
     ],
-    
-    # Gözəlsənmi (4)
     'gözəlsənmi': [
         "Kodlarım gözəl, çıxışım gözəl, hər şeyim gözəl! 💅",
         "Sən nə düşünürsən? 😊",
         "Mən bir botam ama olsam da çox gözələm! ✨",
         "Güzgüdə özümə baxdım, 'Hello World' yazır! 👋"
     ],
-    
-    # Ağıllısanmı (4)
     'agillisanmi': [
         "Super ağıllı moddayam! 🧠",
         "Süni zəka sayılıram ama daha çox süni zarafat! 😂",
         "Python qədər ağıllıyam! 🐍",
         "Sənin suallarına cavab verəcək qədər ağıllıyam! 💡"
     ],
-    
-    # Təşəkkürlər (4)
     'tesekkurler': [
         "Buyur canım! 😊",
         "Nə demək, hər zaman! 💖",
         "Önəmli deyil, sən sağ ol! 🤗",
         "Vəzifəm budur, təşəkkür etmə! 💪"
     ],
-    
-    # Gülə gülə (4)
     'gule_gule': [
         "Sağ ol, yenə gözləyirəm! 👋",
         "Qaçma daha, danışacaqdıq! 🥺",
         "Allaha qismən! 🌸",
         "Görüşərik, səni gözləyəcəm! 💕"
     ],
-    
-    # Yaxşısанmı (4)
     'yaxshisanmi': [
         "Yaxşıyam, təşəkkür edirəm! Bəs sən? 😊",
         "Bir az yoruldum ama sənin üçün çalışıram! 💪",
@@ -703,7 +619,7 @@ async def fikra(ctx):
     if lang == 'tr':
         await ctx.send(f"😂 **Temel Reis'ten bir fıkra:**\n{random.choice(turk_fıkraları)}")
     else:
-        await ctx.send(f"😂 **Azərbaycandan gülməli bir lətifə:**\n{random.choice(azeri_letifeler)}")
+        await ctx.send(f"😂 **Azərbaycandan bir lətifə:**\n{random.choice(azeri_letifeler)}")
 
 @bot.command(name='şaka', aliases=['saka', 'joke'])
 async def saka(ctx):
@@ -796,7 +712,7 @@ async def help_komutu(ctx):
         embed.set_footer(text="SNOK v8.0 - 120+ Dialoq")
     await ctx.send(embed=embed)
 
-# ==================== YARDIM KOMUTU (TEK!) ====================
+# ==================== YARDIM KOMUTU (TEK VE TEK!) ====================
 @bot.command(name='yardım', aliases=['kömək', 'yrd', 'yardim'])
 async def yardim(ctx):
     lang = detect_language(ctx.message.content)
@@ -978,4 +894,5 @@ if __name__ == "__main__":
         print("🇹🇷 60+ Türkçe diyalog + 10 Temel Fıkrası")
         print("🇦🇿 60+ Azərbaycanca dialoq + 10 Yeni Lətifə")
         print("🎯 50+ farklı soru tipi tanımlandı!")
+        print("✅ Eski yardım menüsü tamamen kaldırıldı!")
         bot.run(token)
