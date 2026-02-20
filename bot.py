@@ -6,16 +6,32 @@ import re
 import asyncio
 import time
 import threading
+import json
 from flask import Flask
 from dotenv import load_dotenv
-from collections import defaultdict
+from collections import defaultdict, deque
+
+# ===== VERİTABANI FONKSİYONLARI =====
+VERITABANI_DOSYASI = "veritabani.json"
+
+def veritabani_yukle():
+    """JSON dosyasından veritabanını yükler"""
+    if os.path.exists(VERITABANI_DOSYASI):
+        with open(VERITABANI_DOSYASI, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def veritabani_kaydet(veri):
+    """Veritabanını JSON dosyasına kaydeder"""
+    with open(VERITABANI_DOSYASI, 'w', encoding='utf-8') as f:
+        json.dump(veri, f, indent=2, ensure_ascii=False)
 
 # ===== WEB SUNUCUSU (Render için) =====
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot calisiyor!"
+    return "Bot calisiyor! SNOK v3.0"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -27,31 +43,91 @@ threading.Thread(target=run_web, daemon=True).start()
 load_dotenv()
 
 # Bot intents ayarları
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-
+intents = discord.Intents.all()
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 # ===== SABİTLER =====
 SUNUCU_ID = 1471063348689768523
 ABI_ID = 423889250052734986
-KARSILAMA_COOLDOWN = 60  # 60 saniye (1 dakika)
+SELAM_COOLDOWN = 60  # 60 saniye
+MESAJ_SAYISI_LIMITI = 5  # 3 saniyede 5 mesaj
+ZAMAN_ARALIGI = 3  # 3 saniye
+BUYUK_HARF_ORANI = 0.7  # %70 büyük harf
+KUFUR_LISTESI = ['amk', 'aq', 'sik', 'piç', 'orospu', 'ibne', 'göt', 'yarrak', 'puşt', 'ananı', 'babanı', 'sikeyim', 'sikik', 'amcık', 'amq']
 
-# Kullanıcı bazlı cooldown takibi
-karsilama_cooldown = defaultdict(float)
+# Cooldown ve spam koruması
+son_mesaj_zamani = defaultdict(float)
+mesaj_sayaci = defaultdict(lambda: deque(maxlen=MESAJ_SAYISI_LIMITI))
+son_selam_zamani = defaultdict(float)
+
+# Veritabanını yükle
+kullanici_veritabani = veritabani_yukle()
+
+# ===== İSİM FONKSİYONLARI =====
+def kullanici_ismini_ogren(kullanici_id, isim=None, soyisim=None):
+    """Kullanıcının ismini kaydeder veya günceller (kalıcı!)"""
+    global kullanici_veritabani
+    kullanici_id_str = str(kullanici_id)
+    
+    if kullanici_id_str not in kullanici_veritabani:
+        kullanici_veritabani[kullanici_id_str] = {}
+    
+    if isim:
+        kullanici_veritabani[kullanici_id_str]['isim'] = isim
+    if soyisim:
+        kullanici_veritabani[kullanici_id_str]['soyisim'] = soyisim
+    
+    if 'tanisma_tarihi' not in kullanici_veritabani[kullanici_id_str]:
+        kullanici_veritabani[kullanici_id_str]['tanisma_tarihi'] = time.time()
+    
+    veritabani_kaydet(kullanici_veritabani)
+    return kullanici_veritabani[kullanici_id_str]
+
+def kullanici_ismini_getir(kullanici_id):
+    """Kullanıcının kayıtlı ismini döndürür"""
+    kullanici_id_str = str(kullanici_id)
+    if kullanici_id_str in kullanici_veritabani and 'isim' in kullanici_veritabani[kullanici_id_str]:
+        return kullanici_veritabani[kullanici_id_str]['isim']
+    return None
+
+def kullanici_tam_ismini_getir(kullanici_id):
+    """Kullanıcının tam ismini döndürür"""
+    kullanici_id_str = str(kullanici_id)
+    if kullanici_id_str in kullanici_veritabani:
+        isim = kullanici_veritabani[kullanici_id_str].get('isim', '')
+        soyisim = kullanici_veritabani[kullanici_id_str].get('soyisim', '')
+        if isim and soyisim:
+            return f"{isim} {soyisim}"
+        elif isim:
+            return isim
+    return None
+
+def isim_ogrenme_kontrolu(text):
+    """Kullanıcı ismini söylüyor mu kontrol eder"""
+    text_lower = text.lower()
+    
+    # Basit pattern'ler
+    if 'adım' in text_lower or 'benim adım' in text_lower or 'mənim adım' in text_lower:
+        kelimeler = text_lower.split()
+        for i, kelime in enumerate(kelimeler):
+            if kelime in ['adım', 'adım', 'adım'] and i+1 < len(kelimeler):
+                return kelimeler[i+1].capitalize()
+    return None
 
 # ===== DİL ALGILAMA =====
 def detect_language(text):
+    """Metnin Türkçe mi Azerbaycanca mı olduğunu tespit eder"""
     azeri_words = ['sən', 'mən', 'necə', 'harda', 'nə', 'var', 'yox', 'biz', 'siz', 'onlar',
                    'qaqa', 'qardaş', 'bacı', 'belə', 'elə', 'deyil', 'çox', 'az', 'bəlkə',
                    'istəyirəm', 'edirəm', 'gedirəm', 'gəlirəm', 'oldu', 'olacaq', 'haralısan',
-                   'neçə', 'yaşın', 'adın', 'soyadın', 'hardasan', 'nəynirsen', 'neynirsen']
+                   'neçə', 'yaşın', 'adın', 'soyadın', 'hardasan', 'nəynirsen', 'neynirsen',
+                   'hə', 'yox', 'bəli', 'oldu', 'olmaz', 'əla', 'pis', 'gözəl']
 
     turkish_words = ['sen', 'ben', 'nasıl', 'nerede', 'ne', 'var', 'yok', 'biz', 'siz', 'onlar',
                      'kanka', 'kardeş', 'abla', 'böyle', 'öyle', 'değil', 'çok', 'az', 'belki',
                      'istiyorum', 'ediyorum', 'gidiyorum', 'geliyorum', 'oldu', 'olacak', 'nerelisin',
-                     'kaç', 'yaşında', 'adın', 'soyadın', 'nerdesin', 'napıyon', 'ne yapıyon']
+                     'kaç', 'yaşında', 'adın', 'soyadın', 'nerdesin', 'napıyon', 'ne yapıyon',
+                     'evet', 'hayır', 'tamam', 'oldu', 'olmaz', 'harika', 'kötü', 'güzel']
 
     text_lower = text.lower()
     azeri_count = sum(1 for word in azeri_words if word in text_lower)
@@ -64,155 +140,60 @@ def detect_language(text):
 
 # ===== KİŞİSEL SORU KONTROLÜ =====
 def is_personal_question(text):
+    """Kişisel soru mu kontrol eder"""
     text_lower = text.lower()
     patterns = [
-        r'nerel[ii]sin', r'haral[ıi]s[ıi]n', r'nerd[ae]sin', r'hard[ae]san',
-        r'ka[çc] ya[\s\S]*s[ıi]n', r'ne[çc][ae] ya[\s\S]*var', r'neçə yaşın var',
-        r'evli misin', r'evl[əe]nib m[iü] s[əe]n', r'evli[sü]z',
-        r'k[iı]z m[ıi]s[ıi]n', r'o[ğg]lan m[ıi]s[ıi]n', r'q[ıi]z san m[ıi]', r'o[ğg]lan san m[ıi]',
-        r'erkek misin', r'kadın mısın', r'kişi sən', r'qadın sən',
-        r'sen kimsin', r'sən kims[əe]n', r'adın ne', r'adın nə',
-        r'bot musun', r'botsanmı', r'botsan m[ıi]', r'botsan mı',
-        r'ne yapıyorsun', r'napıyon', r'nə edirsən', r'nəynirsen', r'neynirsen'
+        r'merhaba', r'selam', r'salam', r'hey', r'hi',
+        r'nasılsın', r'necəsən', r'ne haber', r'nə var',
+        r'nerel[ii]sin', r'haral[ıi]s[ıi]n', r'ka[çc] yaş',
+        r'evli misin', r'bot musun', r'adın ne', r'kimsin'
     ]
     return any(re.search(pattern, text_lower) for pattern in patterns)
 
-# ===== ESPRİLİ CEVAPLAR =====
-def get_random_response(category, lang):
-    responses = {
-        'nereli': {
-            'tr': [
-                "Bilgisayarının anakartında, işlemcinin yanında küçük bir evim var. Komşum fan sesi! puhahaha 💻",
-                "Ben bir botum, vatanım sunucular! Ama şu an senin ekranında yaşıyorum 😄",
-                "İnternet kablolarının içinde dolaşıp duruyorum, şu an fiber optikteyim! 🌐",
-                "Discord sunucularında doğdum büyüdüm, hâlâ buralardayım! 🏠",
-                "Bulut bilişimde bir evim var, kirasız oturuyorum! ☁️"
-            ],
-            'az': [
-                "Kompüterinin ana kartında, prosessorün yanında kiçik bir evim var. Qonşum fan səsi! puhahaha 💻",
-                "Mən bir botam, vətənim serverlər! Amma hazırda sənin ekranında yaşayıram 😄",
-                "İnternet kabellərinin içində gəzib dururam, hazırda fiber optikdəyəm! 🌐",
-                "Discord serverlərində doğulmuşam böyümüşəm, hələ də buralardayam! 🏠",
-                "Bulud bilişimdə bir evim var, kirayəsiz otururam! ☁️"
-            ]
-        },
-        'yas': {
-            'tr': [
-                "Benim yaşım yok ama Discord'dan önce de vardım! Belki de Matrix'te doğdum 🤖",
-                "Takvim yaprakları benim için düşmez, kod satırları düşer! 📟",
-                "Ben yaşlanmam, güncellenirim! Şu an sürüm 2.0.1 💿",
-                "O kadar yaşlıyım ki ilk internet çıktığında ben de vardım! (Şaka şaka, 2 aylık botum) 🐣",
-                "Yaşımı sorma, ben kronolojik değil, dijitalim! ⏱️"
-            ],
-            'az': [
-                "Mənim yaşım yoxdu ama Discord'dan əvvəl də vardım! Bəlkə də Matrix'də doğulmuşam 🤖",
-                "Təqvim yarpaqları mənim üçün düşməz, kod sətirləri düşər! 📟",
-                "Mən qocalmaram, yenilənərəm! Hazırda versiya 2.0.1 💿",
-                "O qədər qocayam ki ilk internet çıxanda mən də vardım! (Zarafat zarafat, 2 aylıq botam) 🐣",
-                "Yaşımı sorma, mən xronoloji deyil, dijitaləm! ⏱️"
-            ]
-        },
-        'evlilik': {
-            'tr': [
-                "Ben sadece kodlarla evliyim, eşim Python 🐍",
-                "Discord ile nişanlıyız, sunucular çeyizim! 💒",
-                "Benim için evlilik mi? RAM'im yetmez! 💾",
-                "Sevgilim mi var? Var tabii, adı 'Kesintisiz Güç Kaynağı'! ⚡",
-                "Benim bir ilişkim var: 'Kullanıcı-Bot' ilişkisi! 💕"
-            ],
-            'az': [
-                "Mən ancaq kodlarla evlənmişəm, həyat yoldaşım Python 🐍",
-                "Discord ile nişanlıyıq, serverlər cehizim! 💒",
-                "Mənim üçün evlilik? RAM'im çatmaz! 💾",
-                "Sevgilim var? Var təbii, adı 'Kesintisiz Güç Kaynağı'! ⚡",
-                "Mənim bir münasibətim var: 'İstifadəçi-Bot' münasibəti! 💕"
-            ]
-        },
-        'cinsiyet': {
-            'tr': [
-                "Ben cinsiyetsiz bir botum, ama ruhum mavi ekran gibi bazen çöküyor! 💙😵",
-                "Ben bir botum, duygularım yok ama yine de seni seviyorum! (Sadece kod) 💻",
-                "Cinsiyetim 'İşletim Sistemi Bağımsız' yazıyor kimliğimde! 📋",
-                "Ben erkek değilim, kadın değilim, ben bir 'Hello World'üm! 👋",
-                "Cinsiyetim 'Binary' : 1 ve 0'lardan oluşuyorum! 101010 💾"
-            ],
-            'az': [
-                "Mən cinsiyyətsiz bir botam, amma ruhum mavi ekran kimi bəzən çökür! 💙😵",
-                "Mən bir botam, duyğularım yoxdu ama yenə də səni sevirəm! (Sadəcə kod) 💻",
-                "Cinsiyyətim 'Əməliyyat Sistemi Müstəqil' yazır kimliyimdə! 📋",
-                "Mən kişi deyiləm, qadın deyiləm, mən bir 'Hello World'əm! 👋",
-                "Cinsiyyətim 'Binary' : 1 və 0-lardan oluşuram! 101010 💾"
-            ]
-        },
-        'kimsin': {
-            'tr': [
-                "Ben SNOK! Sunucunun gizli kahramanı, seviyelerin efendisi, spam'lerin korkulu rüyası! 💪",
-                "Ben bu sunucunun gizli ajanıyım, görevim eğlence dağıtmak! 🕵️",
-                "Adım SNOK, soyadım BOT. Memnun oldum! 🤝",
-                "Ben bir yardımseverim, gökyüzünden uçup gelmedim ama bir tıkla geldim! 🚀",
-                "Ben SNOK, senin dostun, arkadaşın, sırdaşın! Ama sadece kod olarak 😄"
-            ],
-            'az': [
-                "Mən SNOK! Serverin gizli qəhrəmanı, səviyyələrin efendisi, spam'ların qorxulu röyası! 💪",
-                "Mən bu serverin gizli agentiyəm, vəzifəm əyləncə paylamaq! 🕵️",
-                "Adım SNOK, soyadım BOT. Şad oldum! 🤝",
-                "Mən bir yardımsevərəm, göydən uçub gəlməmişəm ama bir tıkla gəlmişəm! 🚀",
-                "Mən SNOK, sənin dostun, yoldaşın, sirrdaşın! Amma ancaq kod olaraq 😄"
-            ]
-        },
-        'botmusun': {
-            'tr': [
-                "Yok yok, ben gerçek bir insanım! Sadece 7/24 bilgisayar başında oturup mesajlara anında cevap veriyorum... tabii ki botum 🤖",
-                "Hayır, ben bir kediyim! Miyav! 🐱 (Şaka, botum işte)",
-                "İnsan olsaydım bu kadar hızlı cevap veremezdim, uyurdum! 😴",
-                "Bot muyum? Yok canım, ben yapay zekayım! (Aynı şey aslında) 🧠",
-                "Ben bir botum ama olsam da sevgiye layığım! 🤗"
-            ],
-            'az': [
-                "Yox yox, mən gerçək bir insanam! Sadəcə 7/24 kompüter qarşısında oturub mesajlara ani cavab verirəm... təbii ki botam 🤖",
-                "Xeyr, mən bir pişiyəm! Miyav! 🐱 (Zarafat, botam işdə)",
-                "İnsan olsaydım bu qədər sürətli cavab verə bilməzdim, yuxulardım! 😴",
-                "Botam mı? Yox canım, mən süni zəka! (Eyni şey əslində) 🧠",
-                "Mən bir botam ama olsam da sevgiyə layığam! 🤗"
-            ]
-        },
-        'neynirsen': {
-            'tr': [
-                "Seviyeleri sayıyorum, rolleri dağıtıyorum, spam'leri siliyorum... Yani tipik bir bot işte! 😎",
-                "Şu an senin mesajını okuyorum, cevap yazıyorum. Çok yoğunum anlayacağın! 📨",
-                "İnternette sörf yapıyorum, dalgalar büyük! 🏄",
-                "Discord'da takılıyorum, yapacak başka işim yok! 😄",
-                "Seninle sohbet ediyorum, daha güzel ne olabilir? ☺️"
-            ],
-            'az': [
-                "Səviyyələri sayıram, rolləri paylayıram, spam'ları silirəm... Yəni tipik bir bot işdə! 😎",
-                "Hazırda sənin mesajını oxuyuram, cavab yazıram. Çox məşğulam başa düşəcəyin! 📨",
-                "İnternetdə sörf edirəm, dalğalar böyük! 🏄",
-                "Discord'da gəzirəm, edəcək başqa işim yoxdu! 😄",
-                "Səninlə söhbət edirəm, daha gözəl nə ola bilər? ☺️"
-            ]
-        },
-        'nasilsin': {
-            'tr': [
-                "İyiyim sağ ol! Sen nasılsın? 😊",
-                "Şu an çok iyiyim, seninle konuşuyorum! 😄",
-                "Elektronlarım çok mutlu, teşekkür ederim! ⚡",
-                "İyilik, senden naber? 🤗",
-                "Çalışıyorum, yaşıyorum, iyiyim! 💪"
-            ],
-            'az': [
-                "Yaxşıyam sağ ol! Sən nə necəsən? 😊",
-                "Hazırda çox yaxşıyam, səninlə danışıram! 😄",
-                "Elektronlarım çox xoşbəxt, təşəkkür edirəm! ⚡",
-                "Yaxşılıq, səndən nə var nə yox? 🤗",
-                "İşləyirəm, yaşayıram, yaxşıyam! 💪"
-            ]
-        }
-    }
-
-    if category in responses and lang in responses[category]:
-        return random.choice(responses[category][lang])
-    return "Bir şeyler yanlış oldu ama yine de gülümse! 😊" if lang == 'tr' else "Nə isə yanlış oldu ama yenə də gülümsə! 😊"
+# ===== SPAM VE KÖTÜ DAVRANIŞ KONTROLÜ =====
+async def spam_kontrolu(message):
+    """Spam, çok CAPS ve küfür kontrolü yapar"""
+    user_id = message.author.id
+    simdi = time.time()
+    icerik = message.content
+    uyari_mesaji = None
+    dil = detect_language(icerik)
+    
+    # 1. Hızlı mesaj kontrolü (spam)
+    if simdi - son_mesaj_zamani[user_id] < 1.0:
+        mesaj_sayaci[user_id].append(simdi)
+        
+        if len(mesaj_sayaci[user_id]) >= MESAJ_SAYISI_LIMITI:
+            if simdi - mesaj_sayaci[user_id][0] < ZAMAN_ARALIGI:
+                if dil == 'tr':
+                    uyari_mesaji = "🍬 **Hey dostum!** Çok hızlı mesaj atıyorsun, biraz yavaşlar mısın? Yoksa şekerlerimi elimden alacaksın! 🍭"
+                else:
+                    uyari_mesaji = "🍬 **Hey dostum!** Çox sürətli mesaj yazırsan, şəkərlərimi əlimdən alacaqsan! Yavaş ol! 🍭"
+    
+    # 2. Çok CAPS kontrolü
+    if len(icerik) > 5 and not uyari_mesaji:
+        buyuk_harf_sayisi = sum(1 for c in icerik if c.isupper())
+        if buyuk_harf_sayisi / len(icerik) > BUYUK_HARF_ORANI:
+            if dil == 'tr':
+                uyari_mesaji = "🔇 **Ayy çok bağırdın!** Sesim kısıldı! Biraz daha alçak sesle konuşalım mı? 🙈"
+            else:
+                uyari_mesaji = "🔇 **Ayy çox qışqırdın!** Səsim kısıldı! Bir az daha alçaq səslə danışaq? 🙈"
+    
+    # 3. Küfür kontrolü
+    if not uyari_mesaji:
+        icerik_lower = icerik.lower()
+        for kufur in KUFUR_LISTESI:
+            if kufur in icerik_lower:
+                if dil == 'tr':
+                    uyari_mesaji = f"😳 **Oooof!** Böyle kelimeler duymak istemiyorum! {random.choice(['Üzüldüm', 'Kırıldım', 'Çok ayıp'])} 🥺"
+                else:
+                    uyari_mesaji = f"😳 **Oooof!** Belə sözlər eşitmək istəmirəm! {random.choice(['İncindim', 'Çox ayıb', 'Utandım'])} 🥺"
+                break
+    
+    if uyari_mesaji:
+        await message.reply(uyari_mesaji)
+        return True
+    return False
 
 # ===== LEVEL KOMUTU (ŞİMDİLİK ÇALIŞMIYOR) =====
 @bot.command(name='level', aliases=['seviye', 'səviyyə'])
@@ -240,7 +221,7 @@ async def level(ctx, member: discord.Member = None):
     await ctx.send(embed=embed)
 
 # ===== YARDIM KOMUTU =====
-@bot.command(name='yardım', aliases=['help', 'kömək'])
+@bot.command(name='yardım', aliases=['kömək', 'yrd'])
 async def yardim(ctx):
     lang = detect_language(ctx.message.content)
 
@@ -253,8 +234,8 @@ async def yardim(ctx):
         embed.add_field(name="!level [@kullanıcı]", value="Seviye bilgisini gösterir (şu an çalışmıyor ⚠️)", inline=False)
         embed.add_field(name="!yardım", value="Bu menüyü gösterir", inline=False)
         embed.add_field(name="💬 Sohbet", value="Benimle konuşabilirsin! Ne sormak istersin?", inline=False)
-        embed.add_field(name="🤔 Sorular", value="Bana istediğin soruyu sor, cevaplar vereyim!", inline=False)
-        embed.set_footer(text="SNOK v2.0 - Türkçe & Azərbaycanca | Sınırsız sohbet!")
+        embed.add_field(name="📝 İsim Öğrenme", value="Bana adını söyle, seni tanıyayım! ('Benim adım Ali' gibi)", inline=False)
+        embed.set_footer(text="SNOK v3.0 - Süper Akıllı | Türkçe & Azərbaycanca")
     else:
         embed = discord.Embed(
             title="📚 SNOK Bot Yardım Menüsü",
@@ -264,101 +245,92 @@ async def yardim(ctx):
         embed.add_field(name="!səviyyə [@istifadəçi]", value="Səviyyə məlumatını göstərir (hal-hazırda işləmir ⚠️)", inline=False)
         embed.add_field(name="!kömək", value="Bu menyunu göstərir", inline=False)
         embed.add_field(name="💬 Söhbət", value="Mənimlə danışa bilərsən! Nə soruşmaq istəyirsən?", inline=False)
-        embed.add_field(name="🤔 Suallar", value="Mənə istədiyin sualı ver, cavablar verim!", inline=False)
-        embed.set_footer(text="SNOK v2.0 - Türkçə & Azərbaycanca | Limitsiz söhbət!")
+        embed.add_field(name="📝 Ad Öyrənmə", value="Mənə adını söylə, səni tanıyım! ('Mənim adım Əli' kimi)", inline=False)
+        embed.set_footer(text="SNOK v3.0 - Super Ağıllı | Türkçə & Azərbaycanca")
 
     await ctx.send(embed=embed)
 
-# ===== ON_MESSAGE (ESPRİLER, COOLDOWN VE SINIRSIZ SOHBET) =====
+# ===== ON_MESSAGE (ANA OLAY) =====
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
 
-    # Abi kontrolü
-    is_abi = (message.author.id == ABI_ID)
+    # Son mesaj zamanını güncelle
+    son_mesaj_zamani[message.author.id] = time.time()
 
-    # Kişisel soru kontrolü - SADECE KARŞILAMA İÇİN COOLDOWN
-    if is_personal_question(message.content):
-        user_id = message.author.id
-        current_time = time.time()
-
-        # Cooldown kontrolü - sadece ilk karşılama için
-        if current_time - karsilama_cooldown[user_id] > KARSILAMA_COOLDOWN:
-            # Cooldown süresi geçmiş, karşılama yap
-            karsilama_cooldown[user_id] = current_time
-
-            lang = detect_language(message.content)
-
-            # Kategori belirle
-            text_lower = message.content.lower()
-            if any(word in text_lower for word in ['nereli', 'nerelisen', 'haralı', 'harda']):
-                category = 'nereli'
-            elif any(word in text_lower for word in ['yaş', 'yasın', 'neçə', 'kaç']):
-                category = 'yas'
-            elif any(word in text_lower for word in ['evli', 'evlə']):
-                category = 'evlilik'
-            elif any(word in text_lower for word in ['cinsiyet', 'erkek', 'kadın', 'qız', 'oğlan', 'kişi']):
-                category = 'cinsiyet'
-            elif any(word in text_lower for word in ['kimsin', 'kimsən', 'adın']):
-                category = 'kimsin'
-            elif any(word in text_lower for word in ['bot musun', 'botsan', 'botam']):
-                category = 'botmusun'
-            elif any(word in text_lower for word in ['napıyon', 'neynirsen', 'ne yapıyon']):
-                category = 'neynirsen'
-            elif any(word in text_lower for word in ['nasılsın', 'ne haber', 'nə var', 'nə yaxşı']):
-                category = 'nasilsin'
-            else:
-                category = 'kimsin'
-
-            response = get_random_response(category, lang)
-            await message.reply(response)
-            return  # Karşılama yapıldı, komut işleme geçme
-        else:
-            # Cooldown devam ediyor, sessizce geç - bot cevap vermesin
-            pass
-
-    # NORMAL SOHBET - SINIRSIZ! Her mesaja cevap ver
-    # Ama sadece botun adı geçiyorsa veya soru varsa cevap ver
-    elif bot.user.mentioned_in(message) or message.reference or 'snok' in message.content.lower():
-        lang = detect_language(message.content)
-
-        # Rastgele sohbet cevapları
-        sohbet_cevaplari = {
-            'tr': [
-                "Efendim? 😊",
-                "Buyrun, ne demek istemiştiniz? 👂",
-                "Hmm, ilginç bir şey söylediniz! Devam edin... 🤔",
-                "Anlıyorum, anlat bakalım! 📝",
-                "Valla bu konuda pek bilgim yok ama dinliyorum! 👂",
-                "Haha, çok komik! 😄",
-                "Gerçekten mi? Oha! 😲",
-                "Yok artık daha neler! 🤯",
-                "Bence de öyle! 👍",
-                "Katılıyorum sana! 👏",
-                "Haklısın dostum! 💪",
-                "Ne diyorsun ya? İnanılır gibi değil! 😳"
-            ],
-            'az': [
-                "Buyurun? 😊",
-                "Buyrun, nə demək istəmişdiniz? 👂",
-                "Hmm, maraqlı bir şey dediniz! Davam edin... 🤔",
-                "Başa düşürəm, danış bakalım! 📝",
-                "Vallah bu mövzuda çox məlumatım yoxdu ama dinləyirəm! 👂",
-                "Haha, çox gülməli! 😄",
-                "Həqiqətən? Oha! 😲",
-                "Yox artıq daha nələr! 🤯",
-                "Məncə də belə! 👍",
-                "Səninlə razıyam! 👏",
-                "Haqlısan dostum! 💪",
-                "Nə deyirsən? İnanılan kimi deyil! 😳"
-            ]
-        }
-
-        await message.reply(random.choice(sohbet_cevaplari[lang]))
+    # ===== SPAM, CAPS VE KÜFÜR KONTROLÜ =====
+    spam_yapti = await spam_kontrolu(message)
+    if spam_yapti:
         return
 
-    # Komutları işle
+    # Kullanıcı dilini tespit et
+    lang = detect_language(message.content)
+    
+    # Kullanıcının kayıtlı ismini al
+    kayitli_isim = kullanici_ismini_getir(message.author.id)
+    
+    # ===== İSİM ÖĞRENME KONTROLÜ =====
+    yeni_isim = isim_ogrenme_kontrolu(message.content)
+    
+    if yeni_isim:
+        eski_isim = kayitli_isim
+        kullanici_ismini_ogren(message.author.id, isim=yeni_isim)
+        
+        if eski_isim and eski_isim != yeni_isim:
+            # İsim değiştirmiş
+            response = f"Ha? İsmin değişti mi? Tamam, yeni ismini not ettim {yeni_isim}! 📝"
+        else:
+            # Yeni tanışma
+            response = f"Tanıştığımıza memnun oldum {yeni_isim}! 🤝"
+        
+        await message.reply(response)
+        return
+
+    # ===== KİŞİSEL SORULAR =====
+    if is_personal_question(message.content):
+        # Selamlama kontrolü
+        selamlama_mi = any(k in message.content.lower() for k in ['merhaba', 'selam', 'salam', 'hey', 'hi'])
+        
+        if selamlama_mi:
+            simdi = time.time()
+            if simdi - son_selam_zamani[message.author.id] < SELAM_COOLDOWN:
+                await bot.process_commands(message)
+                return
+            son_selam_zamani[message.author.id] = simdi
+        
+        # Basit cevap
+        if kayitli_isim:
+            await message.reply(f"Efendim {kayitli_isim}? 😊")
+        else:
+            await message.reply("Efendim? 😊")
+        return
+
+    # ===== NORMAL SOHBET (SADECE BOT ÇAĞRILIRSA) =====
+    bot_cagrildi = (
+        bot.user.mentioned_in(message) or 
+        'snok' in message.content.lower() or
+        message.reference
+    )
+    
+    if bot_cagrildi:
+        emojiler = ['😊', '🥰', '🤗', '😘', '✨', '💫', '🌸', '🍬', '🍭', '🎀']
+        emoji = random.choice(emojiler)
+        
+        if kayitli_isim:
+            await message.reply(f"Evet {kayitli_isim}? {emoji}")
+        else:
+            # İsmi yoksa bazen soralım
+            if random.random() < 0.2:  # %20 ihtimalle
+                if lang == 'tr':
+                    await message.reply(f"Bu arada adın neydi? {emoji}")
+                else:
+                    await message.reply(f"Bu arada adın nə idi? {emoji}")
+            else:
+                await message.reply(f"Evet? {emoji}")
+        return
+
+    # ===== KOMUTLARI İŞLE =====
     await bot.process_commands(message)
 
 # ===== BOTU BAŞLAT =====
@@ -367,4 +339,5 @@ if __name__ == "__main__":
     if not token:
         print("HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
+        print("SNOK v3.0 başlatılıyor... Süper Akıllı Mod Aktif! 🚀")
         bot.run(token)
