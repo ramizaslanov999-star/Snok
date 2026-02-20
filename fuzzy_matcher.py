@@ -20,6 +20,7 @@ class SoruMatcher:
                 'ne yapıyorsun', 'neler yapıyorsun', 'napıyon', 'ne var ne yok',
                 'nasılsın', 'nasılsın', 'nasılsın', 'nasılsın', 'nasılsın',
                 'nasılsın', 'nasılsın', 'nasılsın', 'nasılsın', 'nasılsın'
+                'çok iyiyim', 'çok iyiyim', 'teşekkür ederim', 'sağ ol'
             ],
             
             # NERELİSİN (20+ varyasyon)
@@ -288,3 +289,4 @@ if __name__ == "__main__":
         else:
 
             print(f"✗ {soru} → bulunamadı")
+
