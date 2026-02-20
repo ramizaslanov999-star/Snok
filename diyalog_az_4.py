@@ -235,9 +235,8 @@ DIYALOG_AZ = {
         "Virtual randevu olar? Discord'da görüşək! 💻"
     ],
     
-    # ==================== HƏSRƏT QALDIN (8+ CAVAB) ====================
-    'he
-srət_qaldin': [
+     # ==================== HƏSRƏT QALDIN (8+ CAVAB) ====================
+    'hesret_qaldin': [
         "Çox həsrət qaldım! Harada idin? 🥺 Danış görək?",
         "Hər saniyə səni düşünürdüm! 💭 Sən də düşünürdün?",
         "Həsrət nədir? Mən həmişə buradayam! 😊 Sən harada idin?",
