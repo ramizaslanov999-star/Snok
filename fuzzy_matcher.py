@@ -221,7 +221,7 @@ class SoruMatcher:
         self.toplam_varyasyon = sum(len(v) for v in self.soru_tipleri.values())
         print(f"✅ {len(self.soru_tipleri)} soru tipi, {self.toplam_varyasyon}+ varyasyon yüklendi!")
     
-    def soru_bul(self, metin, esik=65):
+    def soru_bul(self, metin, esik=75):
         """
         Metne en yakın soru tipini bulur
         esik: 0-100 arası, ne kadar yüksekse o kadar katı
@@ -286,4 +286,5 @@ if __name__ == "__main__":
         if kategori:
             print(f"✓ {soru} → {kategori}")
         else:
+
             print(f"✗ {soru} → bulunamadı")
