@@ -57,7 +57,7 @@ app.debug = False
 
 @app.route('/')
 def home():
-    return "Bot calisiyor! SNOK v11.0 - 2000+ Diyalog! 🎪"
+    return "Bot calisiyor! SNOK v11.1 - 2000+ Diyalog! 🎪"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -72,7 +72,7 @@ bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # SABITLER
 SUNUCU_ID = 1471063348689768523
-ABI_ID = 423889250052734986
+ABI_ID = 423889250052734986  # Abi'nin ID'si - kontrol et!
 SELAM_COOLDOWN = 60
 MESAJ_SAYISI_LIMITI = 5
 ZAMAN_ARALIGI = 3
@@ -88,6 +88,9 @@ kullanici_veritabani = veritabani_yukle()
 # Yeni modülleri başlat
 soru_matcher = SoruMatcher()
 konusma_hafizasi = KonusmaHafizasi()
+
+# Son cevapları hatırla (tekrarı önlemek için)
+son_cevaplar = defaultdict(list)
 
 # ==================== ABİ'YE ÖZEL SAMİMİ CEVAPLAR ====================
 abi_cevaplari = {
@@ -199,27 +202,98 @@ abi_cevaplari = {
     ]
 }
 
+# ==================== NORMAL SOHBET CEVAPLARI ====================
+sohbet_cevaplari_tr = [
+    "Anlıyorum, anlat bakalım? 👂",
+    "Öyle mi? Devam et, dinliyorum! 👂",
+    "İlginç... Peki sen ne düşünüyorsun? 💭",
+    "Hmm, anlat bakalım daha fazla? 🤔",
+    "Vay canına, gerçekten mi? 😲",
+    "Bence de öyle! 👍",
+    "Katılıyorum! 👏",
+    "Haklısın dostum! 💪",
+    "Ne diyorsun ya? İnanılır gibi değil! 😳",
+    "Anlat anlat, çok merak ettim! 🥺",
+    "Sonra ne oldu? 🤔",
+    "Evet evet, devam et! 👂",
+    "Çok doğru söylüyorsun! ✨",
+    "Aynen öyle! 💯",
+    "Kesinlikle! 🔥",
+    "Hmm, anlıyorum. Peki sen ne düşünüyorsun? 🤗",
+    "Çok ilginç! Devam et lütfen! 😊",
+    "Seni dinliyorum, anlat bakalım! 👂",
+    "Bu konuda haklı olabilirsin! 💭",
+    "Harika bir nokta! 🌟"
+]
+
+sohbet_cevaplari_az = [
+    "Başa düşürəm, davam et? 👂",
+    "Elə? Danış, dinləyirəm! 👂",
+    "Maraqlıdır... Bəs sən nə düşünürsən? 💭",
+    "Hmm, daha danış görək? 🤔",
+    "Vay canına, həqiqətən? 😲",
+    "Məncə də belə! 👍",
+    "Səninlə razıyam! 👏",
+    "Haqlısan dostum! 💪",
+    "Nə deyirsən? İnanılan kimi deyil! 😳",
+    "Danış danış, çox maraqlandım! 🥺",
+    "Sonra nə oldu? 🤔",
+    "Bəli bəli, davam et! 👂",
+    "Çox doğru deyirsən! ✨",
+    "Aynən belə! 💯",
+    "Mütləq! 🔥",
+    "Hmm, başa düşürəm. Bəs sən nə düşünürsən? 🤗",
+    "Çox maraqlıdır! Davam et zəhmət olmasa! 😊",
+    "Səni dinləyirəm, danış görək! 👂",
+    "Bu mövzuda haqlı ola bilərsən! 💭",
+    "Gözəl bir fikirdir! 🌟"
+]
+
 # ==================== DİYALOG CEVABI GETİR ====================
-def get_dialog_response(kategori, lang, is_abi=False, kullanici_adi=None):
-    """Kategoriye göre rastgele cevap döndür"""
+def get_dialog_response(kategori, lang, is_abi=False, kullanici_adi=None, user_id=None):
+    """Kategoriye göre rastgele cevap döndür (tekrarsız)"""
     
     # Abi'ye özel cevaplar
     if is_abi and kategori in abi_cevaplari:
-        return random.choice(abi_cevaplari[kategori])
+        cevap_havuzu = abi_cevaplari[kategori]
     elif is_abi:
-        return random.choice(abi_cevaplari['default'])
-    
-    # Normal kullanıcı için diyalog cevapları
-    if lang == 'tr':
+        cevap_havuzu = abi_cevaplari['default']
+    elif lang == 'tr':
         if kategori in DIYALOG_TR:
-            return random.choice(DIYALOG_TR[kategori])
+            cevap_havuzu = DIYALOG_TR[kategori]
         else:
-            return "Anlıyorum, anlat bakalım? 🤔"
+            return random.choice(sohbet_cevaplari_tr)
     else:
         if kategori in DIYALOG_AZ:
-            return random.choice(DIYALOG_AZ[kategori])
+            cevap_havuzu = DIYALOG_AZ[kategori]
         else:
-            return "Başa düşürəm, davam et? 🤔"
+            return random.choice(sohbet_cevaplari_az)
+    
+    # Son 3 cevabı hatırla ve tekrarlama
+    if user_id:
+        anahtar = f"{user_id}_{kategori}"
+        if anahtar not in son_cevaplar:
+            son_cevaplar[anahtar] = []
+        
+        # Kullanılabilir cevaplar (son 3'te olmayanlar)
+        kullanilabilir = [c for c in cevap_havuzu if c not in son_cevaplar[anahtar]]
+        
+        if kullanilabilir:
+            secilen = random.choice(kullanilabilir)
+        else:
+            # Hepsi kullanıldıysa, en eskisini çıkar ve yenisini seç
+            secilen = random.choice(cevap_havuzu)
+            if son_cevaplar[anahtar]:
+                son_cevaplar[anahtar].pop(0)
+        
+        # Son cevapları güncelle
+        son_cevaplar[anahtar].append(secilen)
+        if len(son_cevaplar[anahtar]) > 3:
+            son_cevaplar[anahtar].pop(0)
+        
+        return secilen
+    else:
+        return random.choice(cevap_havuzu)
 
 # ==================== SPAM KONTROLÜ ====================
 async def spam_kontrolu(message):
@@ -438,10 +512,10 @@ async def help_komutu(ctx):
     lang = detect_language(ctx.message.content)
     if lang == 'tr':
         embed = discord.Embed(title="🌸 **SNOK Bot** 🌸", description="🤔 **Help** yerine **!yardım** yazmalısın! 🎀", color=discord.Color.pink())
-        embed.set_footer(text="SNOK v11.0 - 2000+ Diyalog")
+        embed.set_footer(text="SNOK v11.1 - 2000+ Diyalog")
     else:
         embed = discord.Embed(title="🌸 **SNOK Bot** 🌸", description="🤔 **Help** yerine **!kömək** yazmalısan! 🎀", color=discord.Color.pink())
-        embed.set_footer(text="SNOK v11.0 - 2000+ Dialoq")
+        embed.set_footer(text="SNOK v11.1 - 2000+ Dialoq")
     await ctx.send(embed=embed)
 
 # ==================== YARDIM KOMUTU ====================
@@ -488,9 +562,9 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         if is_abi:
-            embed.set_footer(text="SNOK v11.0 - 2000+ Diyalog | Hoş geldin Abi! 👑")
+            embed.set_footer(text="SNOK v11.1 - 2000+ Diyalog | Hoş geldin Abi! 👑")
         else:
-            embed.set_footer(text="SNOK v11.0 - 2000+ Diyalog")
+            embed.set_footer(text="SNOK v11.1 - 2000+ Diyalog")
     else:
         embed = discord.Embed(
             title="🌸 **SNOK Bot - 2000+ Dialoq** 🌸",
@@ -529,9 +603,9 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         if is_abi:
-            embed.set_footer(text="SNOK v11.0 - 2000+ Dialoq | Xoş gəldin Abi! 👑")
+            embed.set_footer(text="SNOK v11.1 - 2000+ Dialoq | Xoş gəldin Abi! 👑")
         else:
-            embed.set_footer(text="SNOK v11.0 - 2000+ Dialoq")
+            embed.set_footer(text="SNOK v11.1 - 2000+ Dialoq")
 
     embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
     await ctx.send(embed=embed)
@@ -601,7 +675,7 @@ async def on_message(message):
         duygu = konusma_hafizasi.duygu_guncelle(message.author.id, message.content)
         
         # Cevap al
-        cevap = get_dialog_response(kategori, lang, is_abi, kayitli_isim)
+        cevap = get_dialog_response(kategori, lang, is_abi, kayitli_isim, message.author.id)
         
         # Konuşma hafızasına ekle
         konusma_hafizasi.ekle(message.author.id, message.content, cevap, kategori)
@@ -614,35 +688,59 @@ async def on_message(message):
                 "Anlat bakalım, sen nasılsın?",
                 "Devam et, dinliyorum.",
                 "Sence?",
-                "Ne dersin?"
+                "Ne dersin?",
+                "Anlat anlat merak ettim!",
+                "Sonra ne oldu?"
             ]
             cevap += f" {random.choice(takip_sorulari)}"
         
         await message.reply(cevap)
         return
 
-    # Normal sohbet
+    # Normal sohbet (sadece bot çağrıldığında veya sohbet devam ediyorsa)
     bot_cagrildi = (bot.user.mentioned_in(message) or 'snok' in message.content.lower() or message.reference)
-    if bot_cagrildi:
+    
+    # Konuşma devam ediyor mu kontrol et
+    konusma_devam = konusma_hafizasi.takip_sorusu_gerekli_mi(message.author.id, sure_siniri=300)  # 5 dakika
+    
+    if bot_cagrildi or konusma_devam:
         emoji = random.choice(['😊', '🥰', '✨', '🌸', '🍬', '💖', '🌟', '⭐', '💫'])
+        
+        # Son konuşulan kategoriye göre uygun cevap ver
+        son_konusma = konusma_hafizasi.son_konu_ne(message.author.id)
+        
+        if son_konusma and konusma_devam:
+            # Aynı konuda devam et
+            kategori = son_konusma.get('kategori')
+            if kategori and kategori in ['nasilsin', 'napıyon', 'merhaba']:
+                # Sohbet devam ediyorsa uygun cevap ver
+                if kategori == 'nasilsin':
+                    cevaplar = ["İyilik senden?", "Anlat bakalım?", "Devam et dinliyorum."]
+                    await message.reply(f"{random.choice(cevaplar)} {emoji}")
+                    return
+                elif kategori == 'napıyon':
+                    cevaplar = ["Anlat bakalım neler yapıyorsun?", "Devam et merak ettim.", "Sonra ne oldu?"]
+                    await message.reply(f"{random.choice(cevaplar)} {emoji}")
+                    return
+        
+        # Normal cevap
         if kayitli_isim:
             if is_abi:
-                if lang == 'tr':
-                    await message.reply(f"Abi {kayitli_isim}? {emoji}")
-                else:
-                    await message.reply(f"Abi {kayitli_isim}? {emoji}")
+                await message.reply(f"Abi {kayitli_isim}? {emoji}")
             else:
-                if lang == 'tr':
-                    await message.reply(f"Evet {kayitli_isim}? {emoji}")
-                else:
-                    await message.reply(f"Hə {kayitli_isim}? {emoji}")
+                await message.reply(f"Evet {kayitli_isim}? {emoji}")
         else:
             if random.random() < 0.2:
                 if is_abi:
+                    await message.reply(f"Abi? Adın neydi bu arada? {emoji}")
+                else:
                     if lang == 'tr':
-                        await message.reply(f"Abi? {emoji}")
+                        await message.reply(f"Evet? Adın neydi bu arada? {emoji}")
                     else:
-                        await message.reply(f"Abi? {emoji}")
+                        await message.reply(f"Hə? Adın nə idi bu arada? {emoji}")
+            else:
+                if is_abi:
+                    await message.reply(f"Abi? {emoji}")
                 else:
                     if lang == 'tr':
                         await message.reply(f"Evet? {emoji}")
@@ -658,12 +756,13 @@ if __name__ == "__main__":
     if not token:
         print("❌ HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
-        print("🌸 SNOK v11.0 - 2000+ Diyalog + Abi Özel Modu Aktif! 🎪")
+        print("🌸 SNOK v11.1 - 2000+ Diyalog + Abi Özel Modu Aktif! 🎪")
         print(f"✅ {len(DIYALOG_TR)} Türkçe diyalog kategorisi")
         print(f"✅ {len(DIYALOG_AZ)} Azərbaycanca dialoq kateqoriyası")
         print(f"✅ {soru_matcher.toplam_varyasyon}+ soru varyasyonu")
         print("👑 Abi'ye özel samimi cevaplar eklendi!")
         print("✅ Konuşma hafızası aktif!")
         print("✅ Duygu durumu takibi aktif!")
+        print("✅ Tekrarlayan cevaplar engellendi!")
         print("✅ Render'da hostlamaya hazır! 🚀")
         bot.run(token)
