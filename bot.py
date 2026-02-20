@@ -221,7 +221,7 @@ async def level(ctx, member: discord.Member = None):
     await ctx.send(embed=embed)
 
 # ===== YARDIM KOMUTU - TATLI VERSİYON =====
-@bot.command(name='yardım', aliases=['kömək', 'yrd', 'help'])
+@bot.command(name='yardım', aliases=['kömək', 'yrd', 'yardim'])
 async def yardim(ctx):
     lang = detect_language(ctx.message.content)
 
@@ -378,3 +378,4 @@ if __name__ == "__main__":
         print("   • Çoklu dil desteği (Türkçe & Azərbaycanca) 🌍")
         print("   • Render'da 7/24 çalışmaya hazır! 🚀")
         bot.run(token)
+
