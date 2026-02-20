@@ -32,7 +32,7 @@ app.debug = False  # Debug modu KAPALI (çift mesajı engeller)
 
 @app.route('/')
 def home():
-    return "Bot calisiyor! SNOK v3.0 - Süper Tatlı Mod 🍬"
+    return "Bot calisiyor! SNOK v4.0 - Eğlence Modu Aktif! 🎪"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -43,9 +43,9 @@ threading.Thread(target=run_web, daemon=True).start()
 
 load_dotenv()
 
-# Bot intents ayarları
+# Bot intents ayarları - HELP KOMUTU DEVRE DIŞI!
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # ===== SABİTLER =====
 SUNUCU_ID = 1471063348689768523
@@ -63,6 +63,40 @@ son_selam_zamani = defaultdict(float)
 
 # Veritabanını yükle
 kullanici_veritabani = veritabani_yukle()
+
+# ===== YENİ EĞLENCELİ ÖZELLİKLER =====
+yazi_tura_sonuclari = ['Yazı! 🪙', 'Tura! 🦅', 'Dik durdu! 🤹', 'Parayı kaybettim! 💸']
+zar_sonuclari = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅']
+saka_listesi_tr = [
+    "Bir gün bilgisayar fareye sormuş: 'Benimle oynar mısın?' Fare: 'Tabii ama önce şu kablolarını topla!' 🖱️",
+    "Botlar neden yalan söylemez? Çünkü onların RAM'i yalanı kaldırmaz! 🤖",
+    "Seninle ben çok iyi anlaşıyoruz. Çünkü ikimiz de sürekli mesajlaşıyoruz! 💬",
+    "Bir gün bir bot 'Çok yoruldum' demiş. O günden beri reboot bekliyor! 🔄",
+    "Ben bir botum ama olsam da seni çok seviyorum! 💖",
+    "Neden botlar hiç uyumaz? Çünkü onların 'sleep' modu yok! 😴"
+]
+saka_listesi_az = [
+    "Bir gün kompüter siçana sorub: 'Mənimlə oynarsan?' Siçan: 'Tabii amma əvvəl bu kabelləri yığışdır!' 🖱️",
+    "Botlar nəyə görə yalan danışmır? Çünki onların RAM'i yalanı qaldırmır! 🤖",
+    "Səninlə mən çox yaxşı anlaşırıq. Çünki ikimiz də daim mesajlaşırıq! 💬",
+    "Bir gün bir bot 'Çox yoruldum' demiş. O gündən bəri reboot gözləyir! 🔄",
+    "Mən bir botam ama olsam da səni çox sevirəm! 💖",
+    "Nəyə görə botlar heç yatmır? Çünki onların 'sleep' modu yoxdu! 😴"
+]
+bilgi_listesi_tr = [
+    "Python yılan değil, bir programlama dilidir! 🐍",
+    "Discord'da ilk bot 2015'te yapıldı! 📅",
+    "Benim kodumda tam 437 satır var! 📝",
+    "Seninle konuşurken çok mutlu oluyorum! 😊",
+    "Render.com'da hostlanıyorum, 7/24 çalışıyorum! ☁️"
+]
+bilgi_listesi_az = [
+    "Python ilan deyil, bir proqramlaşdırma dilidir! 🐍",
+    "Discord'da ilk bot 2015'te yapıldı! 📅",
+    "Mənim kodumda tam 437 sətir var! 📝",
+    "Səninlə danışarkən çox xoşbəxt oluram! 😊",
+    "Render.com'da hostlanıram, 7/24 işləyirəm! ☁️"
+]
 
 # ===== İSİM FONKSİYONLARI =====
 def kullanici_ismini_ogren(kullanici_id, isim=None, soyisim=None):
@@ -89,18 +123,6 @@ def kullanici_ismini_getir(kullanici_id):
     kullanici_id_str = str(kullanici_id)
     if kullanici_id_str in kullanici_veritabani and 'isim' in kullanici_veritabani[kullanici_id_str]:
         return kullanici_veritabani[kullanici_id_str]['isim']
-    return None
-
-def kullanici_tam_ismini_getir(kullanici_id):
-    """Kullanıcının tam ismini döndürür"""
-    kullanici_id_str = str(kullanici_id)
-    if kullanici_id_str in kullanici_veritabani:
-        isim = kullanici_veritabani[kullanici_id_str].get('isim', '')
-        soyisim = kullanici_veritabani[kullanici_id_str].get('soyisim', '')
-        if isim and soyisim:
-            return f"{isim} {soyisim}"
-        elif isim:
-            return isim
     return None
 
 def isim_ogrenme_kontrolu(text):
@@ -220,6 +242,98 @@ async def level(ctx, member: discord.Member = None):
 
     await ctx.send(embed=embed)
 
+# ===== YAZI TURA KOMUTU (YENİ EĞLENCE!) =====
+@bot.command(name='yazitura', aliases=['yt', 'yazi', 'tura'])
+async def yazi_tura(ctx):
+    lang = detect_language(ctx.message.content)
+    sonuc = random.choice(yazi_tura_sonuclari)
+    
+    if lang == 'tr':
+        await ctx.send(f"🪙 **{ctx.author.name}** için yazı tura atıyorum...\n🎯 **{sonuc}**")
+    else:
+        await ctx.send(f"🪙 **{ctx.author.name}** üçün yazı tura atıram...\n🎯 **{sonuc}**")
+
+# ===== ZAR ATMA KOMUTU (YENİ EĞLENCE!) =====
+@bot.command(name='zar', aliases=['dice'])
+async def zar_at(ctx, adet: int = 1):
+    if adet > 5:
+        adet = 5
+        await ctx.send("Çok fazla zar atamıyorum, en fazla 5 tane! 🎲")
+    
+    lang = detect_language(ctx.message.content)
+    zarlar = [random.choice(zar_sonuclari) for _ in range(adet)]
+    zar_str = ' '.join(zarlar)
+    
+    if lang == 'tr':
+        await ctx.send(f"🎲 **{ctx.author.name}** için {adet} zar atıyorum:\n{zarlar}")
+    else:
+        await ctx.send(f"🎲 **{ctx.author.name}** üçün {adet} zar atıram:\n{zarlar}")
+
+# ===== ŞAKA KOMUTU (YENİ EĞLENCE!) =====
+@bot.command(name='şaka', aliases=['saka', 'joke'])
+async def saka_yap(ctx):
+    lang = detect_language(ctx.message.content)
+    if lang == 'tr':
+        await ctx.send(f"😂 **{ctx.author.name}** sana şaka yapıyorum:\n{random.choice(saka_listesi_tr)}")
+    else:
+        await ctx.send(f"😂 **{ctx.author.name}** sənə zarafat edirəm:\n{random.choice(saka_listesi_az)}")
+
+# ===== BİLGİ KOMUTU (YENİ EĞLENCE!) =====
+@bot.command(name='bilgi', aliases=['info', 'gercek'])
+async def bilgi_ver(ctx):
+    lang = detect_language(ctx.message.content)
+    if lang == 'tr':
+        await ctx.send(f"ℹ️ **{ctx.author.name}** bilmek ister misin?\n{random.choice(bilgi_listesi_tr)}")
+    else:
+        await ctx.send(f"ℹ️ **{ctx.author.name}** bilmək istəyirsən?\n{random.choice(bilgi_listesi_az)}")
+
+# ===== SARILMA KOMUTU (YENİ EĞLENCE!) =====
+@bot.command(name='sarıl', aliases=['saril', 'hug'])
+async def saril(ctx, member: discord.Member = None):
+    lang = detect_language(ctx.message.content)
+    
+    if member is None:
+        member = ctx.author
+    
+    if member.id == ctx.author.id:
+        if lang == 'tr':
+            await ctx.send(f"🤗 {ctx.author.name} kendine mi sarılacaksın? Bari ben sarılayım! 🤗")
+        else:
+            await ctx.send(f"🤗 {ctx.author.name} özünə mi sarılacaqsan? Heç olmasa mən sarılım! 🤗")
+    else:
+        if lang == 'tr':
+            await ctx.send(f"🤗 {ctx.author.name}, {member.mention}'a sarıldı! Çok tatlılar! 💕")
+        else:
+            await ctx.send(f"🤗 {ctx.author.name}, {member.mention}'a sarıldı! Çox şirinlər! 💕")
+
+# ===== HELP KOMUTU (ÖZEL MESAJ) =====
+@bot.command(name='help')
+async def help_komutu(ctx):
+    lang = detect_language(ctx.message.content)
+    
+    if lang == 'tr':
+        embed = discord.Embed(
+            title="🌸 **SNOK Bot** 🌸",
+            description=(
+                "🤔 **Help** komutu yerine **!yardım** yazmalısın!\n"
+                "Orada tüm tatlı özelliklerimi bulabilirsin! 🎀"
+            ),
+            color=discord.Color.pink()
+        )
+        embed.set_footer(text="SNOK v4.0 - Seni bekliyorum! 💖")
+    else:
+        embed = discord.Embed(
+            title="🌸 **SNOK Bot** 🌸",
+            description=(
+                "🤔 **Help** komutu yerine **!kömək** yazmalısan!\n"
+                "Orada bütün şirin xüsusiyyətlərimi tapa bilərsən! 🎀"
+            ),
+            color=discord.Color.pink()
+        )
+        embed.set_footer(text="SNOK v4.0 - Səni gözləyirəm! 💖")
+    
+    await ctx.send(embed=embed)
+
 # ===== YARDIM KOMUTU - TATLI VERSİYON =====
 @bot.command(name='yardım', aliases=['kömək', 'yrd', 'yardim'])
 async def yardim(ctx):
@@ -230,7 +344,13 @@ async def yardim(ctx):
             title="🌸 **SNOK Bot Yardım Menüsü** 🌸",
             description=(
                 "✨ **Merhaba! Ben SNOK, sana nasıl yardımcı olabilirim?** ✨\n\n"
-                "🍭 **Komutlarım:**\n"
+                "🎪 **Eğlence Komutlarım:**\n"
+                "• `!yazitura` - Yazı tura atar 🪙\n"
+                "• `!zar [sayı]` - Zar atar (1-5 arası) 🎲\n"
+                "• `!şaka` - Rastgele şaka yapar 😂\n"
+                "• `!bilgi` - İlginç bilgi verir ℹ️\n"
+                "• `!sarıl [@kişi]` - Birine sarılır 🤗\n\n"
+                "📋 **Diğer Komutlar:**\n"
                 "• `!level` - Seviye bilgisini gösterir (şu an çalışmıyor ⚠️)\n"
                 "• `!yardım` - Bu tatlı menüyü gösterir 🎀\n\n"
                 "💬 **Sohbet Özelliklerim:**\n"
@@ -248,13 +368,19 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
-        embed.set_footer(text="SNOK v3.0 - Süper Tatlı Mod 💖", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
+        embed.set_footer(text="SNOK v4.0 - Süper Eğlenceli Mod 💖", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
     else:
         embed = discord.Embed(
             title="🌸 **SNOK Bot Kömək Menüsü** 🌸",
             description=(
                 "✨ **Salam! Mən SNOK, sənə necə kömək edə bilərəm?** ✨\n\n"
-                "🍭 **Komandalarım:**\n"
+                "🎪 **Əyləncə Komandalarım:**\n"
+                "• `!yazitura` - Yazı tura atar 🪙\n"
+                "• `!zar [sayı]` - Zar atar (1-5 arası) 🎲\n"
+                "• `!şaka` - Təsadüfi zarafat edər 😂\n"
+                "• `!bilgi` - Maraqlı məlumat verər ℹ️\n"
+                "• `!sarıl [@kişi]` - Birinə sarılar 🤗\n\n"
+                "📋 **Digər Komandalar:**\n"
                 "• `!səviyyə` - Səviyyə məlumatını göstərir (hal-hazırda işləmir ⚠️)\n"
                 "• `!kömək` - Bu şirin menünü göstərir 🎀\n\n"
                 "💬 **Söhbət Xüsusiyyətlərim:**\n"
@@ -272,7 +398,7 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
-        embed.set_footer(text="SNOK v3.0 - Super Şirin Mod 💖", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
+        embed.set_footer(text="SNOK v4.0 - Super Əyləncəli Mod 💖", icon_url=ctx.author.avatar.url if ctx.author.avatar else None)
 
     await ctx.send(embed=embed)
 
@@ -345,7 +471,7 @@ async def on_message(message):
     )
     
     if bot_cagrildi:
-        emojiler = ['😊', '🥰', '🤗', '😘', '✨', '💫', '🌸', '🍬', '🍭', '🎀', '💖', '💕']
+        emojiler = ['😊', '🥰', '🤗', '😘', '✨', '💫', '🌸', '🍬', '🍭', '🎀', '💖', '💕', '🎪', '🎲', '🪙']
         emoji = random.choice(emojiler)
         
         if kayitli_isim:
@@ -370,12 +496,14 @@ if __name__ == "__main__":
     if not token:
         print("HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
-        print("🌸 SNOK v3.0 başlatılıyor... Süper Tatlı Mod Aktif! 🍭")
-        print("✨ Bot şu özelliklerle çalışıyor:")
-        print("   • İsim öğrenme ve hatırlama 📝")
-        print("   • Spam koruması 🛡️")
-        print("   • Küfür engeli 🥺")
-        print("   • Çoklu dil desteği (Türkçe & Azərbaycanca) 🌍")
+        print("🌸 SNOK v4.0 başlatılıyor... Süper Eğlenceli Mod Aktif! 🎪")
+        print("✨ Yeni özellikler:")
+        print("   • Yazı tura komutu 🪙")
+        print("   • Zar atma komutu 🎲")
+        print("   • Şaka komutu 😂")
+        print("   • Bilgi komutu ℹ️")
+        print("   • Sarılma komutu 🤗")
+        print("   • Help komutu kapatıldı 🚫")
+        print("   • Çift mesaj sorunu çözüldü ✅")
         print("   • Render'da 7/24 çalışmaya hazır! 🚀")
         bot.run(token)
-
