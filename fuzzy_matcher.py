@@ -127,6 +127,10 @@ class SoruMatcher:
             'tesekkurler': [
                 'teşekkürler', 'teşekkür ederim', 'sağ ol',
                 'teşekkürler', 'teşekkürler', 'teşekkürler'
+                'teşekkürler', 'teşekkür ederim', 'sağ ol', 'sağol',
+                'teşekkürler', 'teşekkürler', 'eyvallah', 'sağol',
+                'çok teşekkürler', 'çok sağol', 'teşekkür ederim canım',
+                'sağ ol canım', 'teşekkürler dostum', 'eyvallah kanka'
             ],
             
             # GÜLE GÜLE (10+ varyasyon)
@@ -291,5 +295,6 @@ if __name__ == "__main__":
         else:
 
             print(f"✗ {soru} → bulunamadı")
+
 
 
