@@ -697,13 +697,13 @@ async def yardim(ctx):
 # ==================== ON_MESSAGE ====================
 @bot.event
 async def on_message(message):
-    # ÇİFT MESAJ ENGELLEME - GÜÇLENDİRİLMİŞ VERSİYON
+    # ÇİFT MESAJ ENGELLEME - KESİN ÇÖZÜM
     if not hasattr(bot, 'processed_messages'):
-        bot.processed_messages = set()
+        bot.processed_messages = {}
         bot.processed_messages_cleanup = time.time()
     
-    # 1 dakikada bir cache temizliği
-    if time.time() - bot.processed_messages_cleanup > 60:
+    # 30 saniyede bir cache temizliği
+    if time.time() - bot.processed_messages_cleanup > 30:
         bot.processed_messages.clear()
         bot.processed_messages_cleanup = time.time()
     
@@ -711,10 +711,11 @@ async def on_message(message):
     
     # Eğer bu mesaj daha önce işlendiyse KESİNLİKLE işleme
     if message_id in bot.processed_messages:
+        print(f"Çift mesaj engellendi: {message_id}")
         return
     
     # Mesajı işaretle
-    bot.processed_messages.add(message_id)
+    bot.processed_messages[message_id] = time.time()
     
     # Bot kendi mesajlarını işleme
     if message.author.bot:
@@ -865,3 +866,4 @@ if __name__ == "__main__":
         print("✅ Çift mesaj sorunu çözüldü!")
         print("✅ Render'da hostlamaya hazır! 🚀")
         bot.run(token)
+
