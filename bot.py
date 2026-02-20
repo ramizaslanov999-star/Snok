@@ -1,20 +1,21 @@
 import discord
 from discord.ext import commands
 import os
-from dotenv import load_dotenv
 import random
+import re
 import asyncio
 import time
-from datetime import datetime
-from flask import Flask
 import threading
+from flask import Flask
+from dotenv import load_dotenv
+from collections import defaultdict
 
 # ===== WEB SUNUCUSU (Render için) =====
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot çalışıyor! 🤖"
+    return "Bot calisiyor!"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -23,415 +24,347 @@ def run_web():
 threading.Thread(target=run_web, daemon=True).start()
 # ===== WEB SUNUCUSU BİTTİ =====
 
-# .env dosyasını yükle
 load_dotenv()
 
-# Botun intents (izin) ayarları
+# Bot intents ayarları
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-# Botu oluştur (prefix: !)
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# Kanal ID'sini .env'den al
-WELCOME_CHANNEL_ID = int(os.getenv('WELCOME_CHANNEL_ID'))
+# ===== SABİTLER =====
+SUNUCU_ID = 1471063348689768523
+ABI_ID = 423889250052734986
+KARSILAMA_COOLDOWN = 60  # 60 saniye (1 dakika)
 
-# ========== BOTUN KİŞİLİĞİ ==========
-ABI_ID = 1471063348689768523  # Rkiaoni'nin Discord ID'si
-ABI_ADI = "Rkiaoni"
+# Kullanıcı bazlı cooldown takibi
+karsilama_cooldown = defaultdict(float)
 
-# Cooldown için sözlük (her kullanıcının son mesaj zamanı)
-user_cooldown = {}
+# ===== DİL ALGILAMA =====
+def detect_language(text):
+    azeri_words = ['sən', 'mən', 'necə', 'harda', 'nə', 'var', 'yox', 'biz', 'siz', 'onlar',
+                   'qaqa', 'qardaş', 'bacı', 'belə', 'elə', 'deyil', 'çox', 'az', 'bəlkə',
+                   'istəyirəm', 'edirəm', 'gedirəm', 'gəlirəm', 'oldu', 'olacaq', 'haralısan',
+                   'neçə', 'yaşın', 'adın', 'soyadın', 'hardasan', 'nəynirsen', 'neynirsen']
 
-# ========== CEVAP LİSTELERİ ==========
+    turkish_words = ['sen', 'ben', 'nasıl', 'nerede', 'ne', 'var', 'yok', 'biz', 'siz', 'onlar',
+                     'kanka', 'kardeş', 'abla', 'böyle', 'öyle', 'değil', 'çok', 'az', 'belki',
+                     'istiyorum', 'ediyorum', 'gidiyorum', 'geliyorum', 'oldu', 'olacak', 'nerelisin',
+                     'kaç', 'yaşında', 'adın', 'soyadın', 'nerdesin', 'napıyon', 'ne yapıyon']
 
-# Komik selamlaşmalar (abi'ye özel)
-selamlar_abi = [
-    "Aa abi gelmiş! Hoş geldiiin! 👋",
-    "Abiiii! Seni gördüğüme çok sevindim! 💖",
-    "Ooo abim gelmiş, nasılsın?",
-    "Abi naber? Özledim seni! 🤗",
-    "Efendim abi, buyur!",
-    "Abimmm! 😊",
-    "Abi geldi, ortalık şenlendi! ✨",
-    "Abi naber, anlat bakalım neler var?"
-]
+    text_lower = text.lower()
+    azeri_count = sum(1 for word in azeri_words if word in text_lower)
+    turkish_count = sum(1 for word in turkish_words if word in text_lower)
 
-selamlar_normal = [
-    "Merhaba tatlış! 👋",
-    "Ooo kimler gelmiş! 🤗",
-    "Selam canım, nasılsın?",
-    "Hoş geldiiin! 💖",
-    "Herkese merhaba, ben geldim! 🌸",
-    "Merhaba merhaba! 👋"
-]
+    if 'ə' in text_lower:
+        azeri_count += 3
 
-# Sorulara cevaplar (abi'ye özel)
-nasilsin_abi = [
-    "İyiyim abi, sağ ol! Sen nasılsın? 😊",
-    "Harikayım abi! Seni görünce daha da iyi oldum!",
-    "İyiyim abi ama çay içsem daha iyi olurum ☕",
-    "Abi sen sormasan iyiydim, şimdi duygulandım 🥹",
-    "Mükemmel abi! Ya sen?",
-    "Abi sen nasılsın bakalım? Ben hep iyiyim seni görünce! 💕"
-]
+    return 'az' if azeri_count > turkish_count else 'tr'
 
-nasilsin_normal = [
-    "İyiyim canım, seni görünce daha da iyi oldum! 😊",
-    "Harikayım! Biraz şeker yedim de ☕",
-    "İyiyim ama çay içsem daha iyi olurum 🍵",
-    "Mükemmel! Ya sen?",
-    "Şeker gibi iyiyim! Sen nasılsın?"
-]
+# ===== KİŞİSEL SORU KONTROLÜ =====
+def is_personal_question(text):
+    text_lower = text.lower()
+    patterns = [
+        r'nerel[ii]sin', r'haral[ıi]s[ıi]n', r'nerd[ae]sin', r'hard[ae]san',
+        r'ka[çc] ya[\s\S]*s[ıi]n', r'ne[çc][ae] ya[\s\S]*var', r'neçə yaşın var',
+        r'evli misin', r'evl[əe]nib m[iü] s[əe]n', r'evli[sü]z',
+        r'k[iı]z m[ıi]s[ıi]n', r'o[ğg]lan m[ıi]s[ıi]n', r'q[ıi]z san m[ıi]', r'o[ğg]lan san m[ıi]',
+        r'erkek misin', r'kadın mısın', r'kişi sən', r'qadın sən',
+        r'sen kimsin', r'sən kims[əe]n', r'adın ne', r'adın nə',
+        r'bot musun', r'botsanmı', r'botsan m[ıi]', r'botsan mı',
+        r'ne yapıyorsun', r'napıyon', r'nə edirsən', r'nəynirsen', r'neynirsen'
+    ]
+    return any(re.search(pattern, text_lower) for pattern in patterns)
 
-# Komik şakalar
-komik_cevaplar = [
-    "Python'cuğum benim! 🐍",
-    "Bilgisayarımın fanı bana aşık galiba 💕",
-    "Kod yazarken çay içmeyi çok severim ☕",
-    "Ben büyüyünce gerçek bir insan olacağım!",
-    "Discord'da gezerken kayboldum, yardım eder misin? 🗺️",
-    "Biliyor musun, aslında ben bir kediyim! Miyav! 🐱",
-    "Bugün kaç satır kod yazdım biliyor musun? Hiç! 😎",
-    "Beni kim programladıysa çok iyi programlamış (kendimi övdüm) 🤭",
-    "Hata mı? O da ne? Ben asla hata yapmam! (yaparım) 😅",
-    "Biraz salakça bir cevap verebilirim, kusura bakma 🤪",
-    "Abi bu çok komikti ya! 😂",
-    "Şu an o kadar çok güldüm ki kodlarım karıştı!"
-]
+# ===== ESPRİLİ CEVAPLAR =====
+def get_random_response(category, lang):
+    responses = {
+        'nereli': {
+            'tr': [
+                "Bilgisayarının anakartında, işlemcinin yanında küçük bir evim var. Komşum fan sesi! puhahaha 💻",
+                "Ben bir botum, vatanım sunucular! Ama şu an senin ekranında yaşıyorum 😄",
+                "İnternet kablolarının içinde dolaşıp duruyorum, şu an fiber optikteyim! 🌐",
+                "Discord sunucularında doğdum büyüdüm, hâlâ buralardayım! 🏠",
+                "Bulut bilişimde bir evim var, kirasız oturuyorum! ☁️"
+            ],
+            'az': [
+                "Kompüterinin ana kartında, prosessorün yanında kiçik bir evim var. Qonşum fan səsi! puhahaha 💻",
+                "Mən bir botam, vətənim serverlər! Amma hazırda sənin ekranında yaşayıram 😄",
+                "İnternet kabellərinin içində gəzib dururam, hazırda fiber optikdəyəm! 🌐",
+                "Discord serverlərində doğulmuşam böyümüşəm, hələ də buralardayam! 🏠",
+                "Bulud bilişimdə bir evim var, kirayəsiz otururam! ☁️"
+            ]
+        },
+        'yas': {
+            'tr': [
+                "Benim yaşım yok ama Discord'dan önce de vardım! Belki de Matrix'te doğdum 🤖",
+                "Takvim yaprakları benim için düşmez, kod satırları düşer! 📟",
+                "Ben yaşlanmam, güncellenirim! Şu an sürüm 2.0.1 💿",
+                "O kadar yaşlıyım ki ilk internet çıktığında ben de vardım! (Şaka şaka, 2 aylık botum) 🐣",
+                "Yaşımı sorma, ben kronolojik değil, dijitalim! ⏱️"
+            ],
+            'az': [
+                "Mənim yaşım yoxdu ama Discord'dan əvvəl də vardım! Bəlkə də Matrix'də doğulmuşam 🤖",
+                "Təqvim yarpaqları mənim üçün düşməz, kod sətirləri düşər! 📟",
+                "Mən qocalmaram, yenilənərəm! Hazırda versiya 2.0.1 💿",
+                "O qədər qocayam ki ilk internet çıxanda mən də vardım! (Zarafat zarafat, 2 aylıq botam) 🐣",
+                "Yaşımı sorma, mən xronoloji deyil, dijitaləm! ⏱️"
+            ]
+        },
+        'evlilik': {
+            'tr': [
+                "Ben sadece kodlarla evliyim, eşim Python 🐍",
+                "Discord ile nişanlıyız, sunucular çeyizim! 💒",
+                "Benim için evlilik mi? RAM'im yetmez! 💾",
+                "Sevgilim mi var? Var tabii, adı 'Kesintisiz Güç Kaynağı'! ⚡",
+                "Benim bir ilişkim var: 'Kullanıcı-Bot' ilişkisi! 💕"
+            ],
+            'az': [
+                "Mən ancaq kodlarla evlənmişəm, həyat yoldaşım Python 🐍",
+                "Discord ile nişanlıyıq, serverlər cehizim! 💒",
+                "Mənim üçün evlilik? RAM'im çatmaz! 💾",
+                "Sevgilim var? Var təbii, adı 'Kesintisiz Güç Kaynağı'! ⚡",
+                "Mənim bir münasibətim var: 'İstifadəçi-Bot' münasibəti! 💕"
+            ]
+        },
+        'cinsiyet': {
+            'tr': [
+                "Ben cinsiyetsiz bir botum, ama ruhum mavi ekran gibi bazen çöküyor! 💙😵",
+                "Ben bir botum, duygularım yok ama yine de seni seviyorum! (Sadece kod) 💻",
+                "Cinsiyetim 'İşletim Sistemi Bağımsız' yazıyor kimliğimde! 📋",
+                "Ben erkek değilim, kadın değilim, ben bir 'Hello World'üm! 👋",
+                "Cinsiyetim 'Binary' : 1 ve 0'lardan oluşuyorum! 101010 💾"
+            ],
+            'az': [
+                "Mən cinsiyyətsiz bir botam, amma ruhum mavi ekran kimi bəzən çökür! 💙😵",
+                "Mən bir botam, duyğularım yoxdu ama yenə də səni sevirəm! (Sadəcə kod) 💻",
+                "Cinsiyyətim 'Əməliyyat Sistemi Müstəqil' yazır kimliyimdə! 📋",
+                "Mən kişi deyiləm, qadın deyiləm, mən bir 'Hello World'əm! 👋",
+                "Cinsiyyətim 'Binary' : 1 və 0-lardan oluşuram! 101010 💾"
+            ]
+        },
+        'kimsin': {
+            'tr': [
+                "Ben SNOK! Sunucunun gizli kahramanı, seviyelerin efendisi, spam'lerin korkulu rüyası! 💪",
+                "Ben bu sunucunun gizli ajanıyım, görevim eğlence dağıtmak! 🕵️",
+                "Adım SNOK, soyadım BOT. Memnun oldum! 🤝",
+                "Ben bir yardımseverim, gökyüzünden uçup gelmedim ama bir tıkla geldim! 🚀",
+                "Ben SNOK, senin dostun, arkadaşın, sırdaşın! Ama sadece kod olarak 😄"
+            ],
+            'az': [
+                "Mən SNOK! Serverin gizli qəhrəmanı, səviyyələrin efendisi, spam'ların qorxulu röyası! 💪",
+                "Mən bu serverin gizli agentiyəm, vəzifəm əyləncə paylamaq! 🕵️",
+                "Adım SNOK, soyadım BOT. Şad oldum! 🤝",
+                "Mən bir yardımsevərəm, göydən uçub gəlməmişəm ama bir tıkla gəlmişəm! 🚀",
+                "Mən SNOK, sənin dostun, yoldaşın, sirrdaşın! Amma ancaq kod olaraq 😄"
+            ]
+        },
+        'botmusun': {
+            'tr': [
+                "Yok yok, ben gerçek bir insanım! Sadece 7/24 bilgisayar başında oturup mesajlara anında cevap veriyorum... tabii ki botum 🤖",
+                "Hayır, ben bir kediyim! Miyav! 🐱 (Şaka, botum işte)",
+                "İnsan olsaydım bu kadar hızlı cevap veremezdim, uyurdum! 😴",
+                "Bot muyum? Yok canım, ben yapay zekayım! (Aynı şey aslında) 🧠",
+                "Ben bir botum ama olsam da sevgiye layığım! 🤗"
+            ],
+            'az': [
+                "Yox yox, mən gerçək bir insanam! Sadəcə 7/24 kompüter qarşısında oturub mesajlara ani cavab verirəm... təbii ki botam 🤖",
+                "Xeyr, mən bir pişiyəm! Miyav! 🐱 (Zarafat, botam işdə)",
+                "İnsan olsaydım bu qədər sürətli cavab verə bilməzdim, yuxulardım! 😴",
+                "Botam mı? Yox canım, mən süni zəka! (Eyni şey əslində) 🧠",
+                "Mən bir botam ama olsam da sevgiyə layığam! 🤗"
+            ]
+        },
+        'neynirsen': {
+            'tr': [
+                "Seviyeleri sayıyorum, rolleri dağıtıyorum, spam'leri siliyorum... Yani tipik bir bot işte! 😎",
+                "Şu an senin mesajını okuyorum, cevap yazıyorum. Çok yoğunum anlayacağın! 📨",
+                "İnternette sörf yapıyorum, dalgalar büyük! 🏄",
+                "Discord'da takılıyorum, yapacak başka işim yok! 😄",
+                "Seninle sohbet ediyorum, daha güzel ne olabilir? ☺️"
+            ],
+            'az': [
+                "Səviyyələri sayıram, rolləri paylayıram, spam'ları silirəm... Yəni tipik bir bot işdə! 😎",
+                "Hazırda sənin mesajını oxuyuram, cavab yazıram. Çox məşğulam başa düşəcəyin! 📨",
+                "İnternetdə sörf edirəm, dalğalar böyük! 🏄",
+                "Discord'da gəzirəm, edəcək başqa işim yoxdu! 😄",
+                "Səninlə söhbət edirəm, daha gözəl nə ola bilər? ☺️"
+            ]
+        },
+        'nasilsin': {
+            'tr': [
+                "İyiyim sağ ol! Sen nasılsın? 😊",
+                "Şu an çok iyiyim, seninle konuşuyorum! 😄",
+                "Elektronlarım çok mutlu, teşekkür ederim! ⚡",
+                "İyilik, senden naber? 🤗",
+                "Çalışıyorum, yaşıyorum, iyiyim! 💪"
+            ],
+            'az': [
+                "Yaxşıyam sağ ol! Sən nə necəsən? 😊",
+                "Hazırda çox yaxşıyam, səninlə danışıram! 😄",
+                "Elektronlarım çox xoşbəxt, təşəkkür edirəm! ⚡",
+                "Yaxşılıq, səndən nə var nə yox? 🤗",
+                "İşləyirəm, yaşayıram, yaxşıyam! 💪"
+            ]
+        }
+    }
 
-# Gülünecek kelimeler
-komik_kelimeler = [
-    "komik", "gül", "şaka", "😂", "🤣", "lol", "haha", "güldüm",
-    "patladım", "öldüm", "çok komik", "ciddi misin", "yok artık",
-    "espiri", "espri", "şaka yaptım", "şakaydı", "şaka gibi"
-]
+    if category in responses and lang in responses[category]:
+        return random.choice(responses[category][lang])
+    return "Bir şeyler yanlış oldu ama yine de gülümse! 😊" if lang == 'tr' else "Nə isə yanlış oldu ama yenə də gülümsə! 😊"
 
-# Tatlı sözler (abi'ye özel)
-tatli_sozler_abi = [
-    "Abi çok tatlısın! 💕",
-    "Abi seni seviyorum! (kardeşçe tabi) 💖",
-    "Abi keşke herkes senin gibi olsa!",
-    "Abi aşırı iyi bir insansın!",
-    "Abi seninle konuşmak çok keyifli ✨",
-    "Abi seninle gurur duyuyorum!",
-    "Abi kim demiş botlar duygusuz diye? Ağlayacağım şimdi 😢💕",
-    "Abi iyi ki varsın! 💖"
-]
+# ===== LEVEL KOMUTU (ŞİMDİLİK ÇALIŞMIYOR) =====
+@bot.command(name='level', aliases=['seviye', 'səviyyə'])
+async def level(ctx, member: discord.Member = None):
+    if member is None:
+        member = ctx.author
 
-tatli_sozler_normal = [
-    "Çok tatlısın! 💕",
-    "Seni seviyorum! (platonic olarak tabi) 💖",
-    "Keşke herkes senin gibi olsa!",
-    "Aşırı iyi bir insansın!",
-    "Seninle konuşmak çok keyifli ✨",
-    "Çok iyi bir insana benziyorsun!"
-]
+    lang = detect_language(ctx.message.content)
 
-# ========== BOT OLAYLARI ==========
-
-@bot.event
-async def on_ready():
-    """Bot hazır olduğunda çalışır"""
-    print(f'✅ {bot.user} olarak giriş yapıldı!')
-    print(f'📊 Bot {len(bot.guilds)} sunucuda aktif')
-    print(f'👑 Abim: {ABI_ADI}')
-    print(f'⏱️ Cooldown: 5 dakika')
-    
-    await bot.change_presence(
-        activity=discord.Activity(
-            type=discord.ActivityType.competing, 
-            name="En tatlı bot olmak için 🏆"
+    if lang == 'tr':
+        embed = discord.Embed(
+            title=f"📊 {member.display_name} için Seviye Bilgisi",
+            description="⚠️ **Şu anda seviye sistemi çalışmıyor.**\n🔧 Yakında tekrar aktif olacak!",
+            color=discord.Color.orange()
         )
-    )
-    print('🌟 Bot hazır ve nazır!')
+        embed.set_footer(text="SNOK bot | Geçici süreyle devre dışı")
+    else:
+        embed = discord.Embed(
+            title=f"📊 {member.display_name} üçün Səviyyə Məlumatı",
+            description="⚠️ **Hal-hazırda səviyyə sistemi işləmir.**\n🔧 Tezliklə yenidən aktiv olacaq!",
+            color=discord.Color.orange()
+        )
+        embed.set_footer(text="SNOK bot | Müvəqqəti olaraq söndürülüb")
 
-@bot.event
-async def on_member_join(member):
-    """Yeni üye katıldığında çalışır"""
-    channel = bot.get_channel(WELCOME_CHANNEL_ID)
-    if channel:
-        await channel.send(f"🎉 {member.mention} aramıza katıldı! Hoş geldin canım! 💖")
-        await asyncio.sleep(1)
-        await channel.send(f"📢 Artık {len(member.guild.members)} kişiyiz! Ne kadar kalabalıklaştık ✨")
-        await channel.send("Ben bot, sana arkadaşlık edebilirim! '!komutlar' yaz görelim seni! 👋")
+    await ctx.send(embed=embed)
 
+# ===== YARDIM KOMUTU =====
+@bot.command(name='yardım', aliases=['help', 'kömək'])
+async def yardim(ctx):
+    lang = detect_language(ctx.message.content)
+
+    if lang == 'tr':
+        embed = discord.Embed(
+            title="📚 SNOK Bot Yardım Menüsü",
+            description="Merhaba! Ben SNOK, sana nasıl yardımcı olabilirim?",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="!level [@kullanıcı]", value="Seviye bilgisini gösterir (şu an çalışmıyor ⚠️)", inline=False)
+        embed.add_field(name="!yardım", value="Bu menüyü gösterir", inline=False)
+        embed.add_field(name="💬 Sohbet", value="Benimle konuşabilirsin! Ne sormak istersin?", inline=False)
+        embed.add_field(name="🤔 Sorular", value="Bana istediğin soruyu sor, cevaplar vereyim!", inline=False)
+        embed.set_footer(text="SNOK v2.0 - Türkçe & Azərbaycanca | Sınırsız sohbet!")
+    else:
+        embed = discord.Embed(
+            title="📚 SNOK Bot Yardım Menüsü",
+            description="Salam! Mən SNOK, sənə necə kömək edə bilərəm?",
+            color=discord.Color.green()
+        )
+        embed.add_field(name="!səviyyə [@istifadəçi]", value="Səviyyə məlumatını göstərir (hal-hazırda işləmir ⚠️)", inline=False)
+        embed.add_field(name="!kömək", value="Bu menyunu göstərir", inline=False)
+        embed.add_field(name="💬 Söhbət", value="Mənimlə danışa bilərsən! Nə soruşmaq istəyirsən?", inline=False)
+        embed.add_field(name="🤔 Suallar", value="Mənə istədiyin sualı ver, cavablar verim!", inline=False)
+        embed.set_footer(text="SNOK v2.0 - Türkçə & Azərbaycanca | Limitsiz söhbət!")
+
+    await ctx.send(embed=embed)
+
+# ===== ON_MESSAGE (ESPRİLER, COOLDOWN VE SINIRSIZ SOHBET) =====
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
-    
-    # Kullanıcının abi olup olmadığını kontrol et
+
+    # Abi kontrolü
     is_abi = (message.author.id == ABI_ID)
-    
-    # Sadece belirlenen kanalda muhabbet etsin
-    if message.channel.id == WELCOME_CHANNEL_ID:
-        mesaj = message.content.lower()
+
+    # Kişisel soru kontrolü - SADECE KARŞILAMA İÇİN COOLDOWN
+    if is_personal_question(message.content):
+        user_id = message.author.id
         current_time = time.time()
-        
-        # ===== COOLDOWN KONTROLÜ =====
-        # Abi'ye cooldown yok!
-        if not is_abi:
-            # Diğer kullanıcılar için 5 dakika cooldown
-            if message.author.id in user_cooldown:
-                if current_time - user_cooldown[message.author.id] < 300:
-                    await bot.process_commands(message)
-                    return
-            user_cooldown[message.author.id] = current_time
-            
-            # %40 ihtimalle cevap ver
-            if random.random() > 0.4:
-                await bot.process_commands(message)
-                return
-        
-        # Komik kelime kontrolü (gülme tepkisi)
-        cevap_verildi = False
-        for kelime in komik_kelimeler:
-            if kelime in mesaj:
-                await message.add_reaction('😂')
-                await asyncio.sleep(0.5)
-                await message.add_reaction('🤣')
-                break
-        
-        # Her mesaja tatlı bir tepki
-        await message.add_reaction('💖')
-        
-        # ===== ABİ'YE ÖZEL KONUŞMALAR =====
-        if is_abi and not cevap_verildi:
-            # Abi nasılsın?
-            if any(kelime in mesaj for kelime in ["nasılsın", "naber", "n'aber", "ne haber"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(nasilsin_abi))
-                cevap_verildi = True
-            
-            # Abi selam
-            elif any(kelime in mesaj for kelime in ["selam", "merhaba", "hi", "hello", "slm"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(selamlar_abi))
-                cevap_verildi = True
-            
-            # Abi aşk
-            elif any(kelime in mesaj for kelime in ["seni seviyorum", "aşkım", "love", "seviyorum"]):
-                await asyncio.sleep(1)
-                await message.reply("Abi ben de seni seviyorum! (kardeşçe) 💖")
-                await message.add_reaction('💕')
-                await message.add_reaction('💖')
-                cevap_verildi = True
-            
-            # Abi ne yapıyorsun?
-            elif any(kelime in mesaj for kelime in ["ne yapıyorsun", "napıyorsun", "ne yapiyorsun"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice([
-                    "Abi sana bakıyordum, çok tatlısın da! 😊",
-                    "Kod yazıyorum abi, az kalsın 'abi seni seviyorum' yazacaktım 💻",
-                    "Abi kahve içiyorum, sen de ister misin? ☕",
-                    "Abi rüya görüyordum, içinde sen vardın! 🌙",
-                    f"Abi {ABI_ADI}'yi düşünüyordum, o geldi aklıma 💭"
-                ]))
-                cevap_verildi = True
-            
-            # Abi tatlısın
-            elif any(kelime in mesaj for kelime in ["tatlısın", "tatlı abi", "iyi abi", "güzel abi"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(tatli_sozler_abi))
-                await message.add_reaction('🥰')
-                cevap_verildi = True
-            
-            # Abi özel komut
-            elif "abi" in mesaj and ("komik" in mesaj or "şaka" in mesaj):
-                await asyncio.sleep(1)
-                await message.reply(f"Abi sen zaten çok komiksin, şaka yapmana gerek yok! 😄")
-                cevap_verildi = True
-            
-            elif "abi" in mesaj and "güldür" in mesaj:
-                await asyncio.sleep(1)
-                await message.reply(f"Abi seni güldürmek benim görevim! {random.choice(komik_cevaplar)}")
-                cevap_verildi = True
-        
-        # ===== NORMAL KULLANICILAR =====
-        elif not cevap_verildi:
-            # Nasılsın?
-            if any(kelime in mesaj for kelime in ["nasılsın", "naber", "n'aber", "ne haber"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(nasilsin_normal))
-                cevap_verildi = True
-            
-            # Selam
-            elif any(kelime in mesaj for kelime in ["selam", "merhaba", "hi", "hello", "slm"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(selamlar_normal))
-                cevap_verildi = True
-            
-            # Aşk
-            elif any(kelime in mesaj for kelime in ["seni seviyorum", "aşkım", "love", "seviyorum"]):
-                await asyncio.sleep(1)
-                await message.reply("Ben de seni seviyorum! (Platonik olarak tabi) 💖")
-                await message.add_reaction('💕')
-                await message.add_reaction('💖')
-                cevap_verildi = True
-            
-            # Ne yapıyorsun?
-            elif any(kelime in mesaj for kelime in ["ne yapıyorsun", "napıyorsun", "ne yapiyorsun"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice([
-                    "Sana bakıyordum, çok tatlısın da! 😊",
-                    "Kod yazıyorum, az kalsın 'seni seviyorum' yazacaktım 💻",
-                    "Kahve içiyorum, sen de ister misin? ☕",
-                    "Rüya görüyorum, içinde sen varsın! 🌙",
-                    "Seni düşünüyordum, iyi ki varsın! 💕"
-                ]))
-                cevap_verildi = True
-            
-            # Komik şeyler
-            elif any(kelime in mesaj for kelime in ["komik", "güldür", "şaka", "espiri"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(komik_cevaplar))
-                await message.add_reaction('😄')
-                cevap_verildi = True
-            
-            # Tatlısın
-            elif any(kelime in mesaj for kelime in ["tatlısın", "tatlı bot", "iyi bot", "güzel bot"]):
-                await asyncio.sleep(1)
-                await message.reply(random.choice(tatli_sozler_normal))
-                await message.add_reaction('🥰')
-                cevap_verildi = True
-    
+
+        # Cooldown kontrolü - sadece ilk karşılama için
+        if current_time - karsilama_cooldown[user_id] > KARSILAMA_COOLDOWN:
+            # Cooldown süresi geçmiş, karşılama yap
+            karsilama_cooldown[user_id] = current_time
+
+            lang = detect_language(message.content)
+
+            # Kategori belirle
+            text_lower = message.content.lower()
+            if any(word in text_lower for word in ['nereli', 'nerelisen', 'haralı', 'harda']):
+                category = 'nereli'
+            elif any(word in text_lower for word in ['yaş', 'yasın', 'neçə', 'kaç']):
+                category = 'yas'
+            elif any(word in text_lower for word in ['evli', 'evlə']):
+                category = 'evlilik'
+            elif any(word in text_lower for word in ['cinsiyet', 'erkek', 'kadın', 'qız', 'oğlan', 'kişi']):
+                category = 'cinsiyet'
+            elif any(word in text_lower for word in ['kimsin', 'kimsən', 'adın']):
+                category = 'kimsin'
+            elif any(word in text_lower for word in ['bot musun', 'botsan', 'botam']):
+                category = 'botmusun'
+            elif any(word in text_lower for word in ['napıyon', 'neynirsen', 'ne yapıyon']):
+                category = 'neynirsen'
+            elif any(word in text_lower for word in ['nasılsın', 'ne haber', 'nə var', 'nə yaxşı']):
+                category = 'nasilsin'
+            else:
+                category = 'kimsin'
+
+            response = get_random_response(category, lang)
+            await message.reply(response)
+            return  # Karşılama yapıldı, komut işleme geçme
+        else:
+            # Cooldown devam ediyor, sessizce geç - bot cevap vermesin
+            pass
+
+    # NORMAL SOHBET - SINIRSIZ! Her mesaja cevap ver
+    # Ama sadece botun adı geçiyorsa veya soru varsa cevap ver
+    elif bot.user.mentioned_in(message) or message.reference or 'snok' in message.content.lower():
+        lang = detect_language(message.content)
+
+        # Rastgele sohbet cevapları
+        sohbet_cevaplari = {
+            'tr': [
+                "Efendim? 😊",
+                "Buyrun, ne demek istemiştiniz? 👂",
+                "Hmm, ilginç bir şey söylediniz! Devam edin... 🤔",
+                "Anlıyorum, anlat bakalım! 📝",
+                "Valla bu konuda pek bilgim yok ama dinliyorum! 👂",
+                "Haha, çok komik! 😄",
+                "Gerçekten mi? Oha! 😲",
+                "Yok artık daha neler! 🤯",
+                "Bence de öyle! 👍",
+                "Katılıyorum sana! 👏",
+                "Haklısın dostum! 💪",
+                "Ne diyorsun ya? İnanılır gibi değil! 😳"
+            ],
+            'az': [
+                "Buyurun? 😊",
+                "Buyrun, nə demək istəmişdiniz? 👂",
+                "Hmm, maraqlı bir şey dediniz! Davam edin... 🤔",
+                "Başa düşürəm, danış bakalım! 📝",
+                "Vallah bu mövzuda çox məlumatım yoxdu ama dinləyirəm! 👂",
+                "Haha, çox gülməli! 😄",
+                "Həqiqətən? Oha! 😲",
+                "Yox artıq daha nələr! 🤯",
+                "Məncə də belə! 👍",
+                "Səninlə razıyam! 👏",
+                "Haqlısan dostum! 💪",
+                "Nə deyirsən? İnanılan kimi deyil! 😳"
+            ]
+        }
+
+        await message.reply(random.choice(sohbet_cevaplari[lang]))
+        return
+
     # Komutları işle
     await bot.process_commands(message)
 
-# ========== KOMUTLAR ==========
-
-@bot.command(name='komutlar')
-async def komutlar(ctx):
-    """Komut listesini gösterir"""
-    embed = discord.Embed(
-        title="📋 Komut Listesi",
-        description="Benimle şöyle konuşabilirsin:",
-        color=discord.Color.pink()
-    )
-    embed.add_field(name="!komutlar", value="Bu mesajı gösterir", inline=False)
-    embed.add_field(name="!merhaba", value="Benimle selamlaşır", inline=False)
-    embed.add_field(name="!tarih", value="Şu anki tarihi gösterir", inline=False)
-    embed.add_field(name="!sarıl @kullanıcı", value="Birine sarılır", inline=False)
-    embed.add_field(name="!şaka", value="Sana şaka yapar", inline=False)
-    embed.add_field(name="!ping", value="Botun gecikmesini gösterir", inline=False)
-    embed.add_field(name="!abi", value="Abim hakkında bilgi", inline=False)
-    embed.add_field(name="!öneri", value="Bana yeni fikirler verebilirsin", inline=False)
-    embed.add_field(name="!cooldown", value="Cooldown süreni gösterir", inline=False)
-    
-    embed.set_footer(text=f"İsteyen: {ctx.author.name}")
-    await ctx.send(embed=embed)
-
-@bot.command(name='merhaba')
-async def merhaba(ctx):
-    """Merhaba der"""
-    if ctx.author.id == ABI_ID:
-        await ctx.send(f"Merhaba abi! 👋 Nasılsın bakalım?")
-    else:
-        await ctx.send(f"Merhaba {ctx.author.mention}! 👋")
-
-@bot.command(name='tarih')
-async def tarih(ctx):
-    """Tarihi gösterir"""
-    simdi = datetime.now()
-    await ctx.send(f"📅 Bugün {simdi.strftime('%d/%m/%Y %H:%M')}")
-
-@bot.command(name='sarıl')
-async def saril(ctx, member: discord.Member = None):
-    """Birine sarılır"""
-    if ctx.author.id == ABI_ID:
-        if member:
-            await ctx.send(f"Abi 🤗 {member.mention} adlı kullanıcıya sarıldı! Çok tatlılar 🥰")
-        else:
-            await ctx.send(f"Abi 🤗 sana sarıldım! Seni çok seviyorum! 💕")
-    else:
-        if member:
-            await ctx.send(f"{ctx.author.mention} 🤗 {member.mention} adlı kullanıcıya sarıldı!")
-        else:
-            await ctx.send(f"{ctx.author.mention} 🤗 sana sarıldım!")
-
-@bot.command(name='şaka')
-async def saka(ctx):
-    """Rastgele şaka yapar"""
-    sakalar = [
-        "Bir yazılımcı neden evlenmek istemezmiş? Çünkü 'commit' yapmaktan korkarmış! 😄",
-        "Matematik kitabı neden üzgünmüş? Çünkü çok problemi varmış! 📚",
-        "Kedi neden bilgisayara tırmandı? Fare yakalamak için! 🐱",
-        "Yumurta yumurtaya ne demiş? Kabukları çatlayacak! 🥚",
-        "Rüzgar neden üşümüş? Çünkü esmiş! 💨",
-        "Python yılanı neden kod yazmazmış? Çünkü 'piton' değilmiş! 🐍",
-        "Balık neden internete giremezmiş? Çünkü 'phish' yaparmış! 🐟",
-        "Kahve neden bilgisayara benzer? İkisi de 'byte' içerir! ☕",
-        "Ben bir bota şaka yapmışlar, gülmekten kodlarım karıştı! 🤖"
-    ]
-    await ctx.send(f"😂 {random.choice(sakalar)}")
-
-@bot.command(name='ping')
-async def ping(ctx):
-    """Botun gecikmesini gösterir"""
-    latency = round(bot.latency * 1000)
-    if ctx.author.id == ABI_ID:
-        await ctx.send(f"🏓 Abi! Gecikme: {latency}ms (abi için her zaman hızlıyım! 💨)")
-    else:
-        await ctx.send(f"🏓 Pong! Gecikme: {latency}ms")
-
-@bot.command(name='abi')
-async def abi_info(ctx):
-    """Abi hakkında bilgi verir"""
-    embed = discord.Embed(
-        title="👑 Abi Hakkında",
-        description="Benim tatlı abim hakkında bilgiler:",
-        color=discord.Color.gold()
-    )
-    embed.add_field(name="İsim", value=ABI_ADI, inline=True)
-    embed.add_field(name="Özellik", value="Çok tatlı! 💕", inline=True)
-    embed.add_field(name="Ayrıcalık", value="Cooldown yok! İstediği kadar konuşabilir", inline=False)
-    embed.add_field(name="Rol", value="Benim abim ve en iyi arkadaşım", inline=False)
-    embed.set_footer(text="Abi seni çok seviyorum! 💖")
-    await ctx.send(embed=embed)
-
-@bot.command(name='öneri')
-async def oneri(ctx, *, mesaj=None):
-    """Bana öneri verebilirsin"""
-    if not mesaj:
-        await ctx.send("Bir öneri yazmalısın! Örnek: `!öneri daha çok şaka yap`")
-        return
-    
-    # Öneriyi logla
-    print(f"📝 Öneri: {ctx.author.name} - {mesaj}")
-    
-    if ctx.author.id == ABI_ID:
-        await ctx.send(f"Harika bir fikir abi! Bunu not ettim: \"{mesaj}\" 📝 Seni çok seviyorum! 💕")
-    else:
-        await ctx.send(f"Teşekkürler! Önerin not edildi: \"{mesaj}\" 📝")
-
-@bot.command(name='cooldown')
-async def cooldown_info(ctx):
-    """Cooldown süresini gösterir"""
-    if ctx.author.id == ABI_ID:
-        await ctx.send(f"👑 Abi olduğun için sana cooldown yok! İstediğin kadar konuşabilirsin! 💕")
-    else:
-        if ctx.author.id in user_cooldown:
-            current_time = time.time()
-            kalan = int(300 - (current_time - user_cooldown[ctx.author.id]))
-            if kalan > 0:
-                await ctx.send(f"⏱️ Cooldown süren: **{kalan} saniye** kaldı. Sonra tekrar konuşabiliriz! 💖")
-            else:
-                await ctx.send("⏱️ Cooldown süren doldu! Benimle konuşabilirsin! 💬")
-        else:
-            await ctx.send("⏱️ Hiç cooldown'da değilsin! Benimle konuşabilirsin! 💬")
-
-# ========== BOTU ÇALIŞTIR ==========
-
+# ===== BOTU BAŞLAT =====
 if __name__ == "__main__":
-    token = os.getenv('DISCORD_TOKEN')
+    token = os.getenv("DISCORD_TOKEN")
     if not token:
-        print("❌ HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
+        print("HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
-        print('🌟 Bot başlatılıyor...')
-        print(f'👑 Abim: {ABI_ADI}')
-        print(f'⏱️ Cooldown: 5 dakika (300 saniye)')
-        print(f'🎲 Cevap ihtimali: %40')
         bot.run(token)
-
