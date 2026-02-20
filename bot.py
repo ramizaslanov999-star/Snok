@@ -57,7 +57,7 @@ app.debug = False
 
 @app.route('/')
 def home():
-    return "Bot calisiyor! SNOK v11.1 - 2000+ Diyalog! 🎪"
+    return "Bot calisiyor! SNOK v12.0 - 2000+ Diyalog! 🎪"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -91,6 +91,82 @@ konusma_hafizasi = KonusmaHafizasi()
 
 # Son cevapları hatırla (tekrarı önlemek için)
 son_cevaplar = defaultdict(list)
+
+# ==================== KONUŞMA AKIŞI İÇİN BAĞLAM CEVAPLARI ====================
+baglam_cevaplari = {
+    'nasilsin_devam': {
+        'tr': [
+            "Anlat bakalım, günün nasıl geçiyor?",
+            "Devam et, seni dinliyorum.",
+            "Sonra ne oldu?",
+            "Peki ya sen, neler yapıyorsun?",
+            "Anlat anlat, çok merak ettim!"
+        ],
+        'az': [
+            "Danış görək, günün necə keçir?",
+            "Davam et, səni dinləyirəm.",
+            "Sonra nə oldu?",
+            "Bəs sən, nə edirsən?",
+            "Danış danış, çox maraqlandım!"
+        ]
+    },
+    'napıyon_devam': {
+        'tr': [
+            "Sonra ne yaptın?",
+            "Devam et, anlat bakalım.",
+            "Peki ya sen?",
+            "Anlat anlat, neler oluyor?",
+            "Harika, başka neler yapıyorsun?"
+        ],
+        'az': [
+            "Sonra nə etdin?",
+            "Davam et, danış görək.",
+            "Bəs sən?",
+            "Danış danış, nələr olur?",
+            "Əla, başqa nə edirsən?"
+        ]
+    },
+    'nerelisin_devam': {
+        'tr': [
+            "Orayı çok merak ettim, anlat bakalım.",
+            "Ne güzel bir yer! Peki orada yaşamak nasıl?",
+            "Harika! Peki oraların yemekleri nasıl?",
+            "Anlat anlat, neler var oralarda?"
+        ],
+        'az': [
+            "Oranı çox maraq etdim, danış görək.",
+            "Nə gözəl bir yer! Bəs orada yaşamaq necə?",
+            "Əla! Bəs oraların yeməkləri necə?",
+            "Danış danış, nələr var oralarda?"
+        ]
+    },
+    'evlimisin_devam': {
+        'tr': [
+            "Anlat bakalım evlilik hikayeni merak ettim.",
+            "Peki evlilik nasıl bir duygu?",
+            "Ne güzel! Peki nasıl tanıştınız?",
+            "Anlat anlat, çok tatlısınız!"
+        ],
+        'az': [
+            "Danış görək evlilik hekayəni maraq etdim.",
+            "Bəs evlilik necə bir hissdir?",
+            "Nə gözəl! Bəs necə tanışdınız?",
+            "Danış danış, çox şirinsiniz!"
+        ]
+    },
+    'seviyor_musun_devam': {
+        'tr': [
+            "Peki sen beni seviyor musun?",
+            "Ne güzel! Anlat bakalım sevgi nedir sence?",
+            "Harika! Peki sevgi hakkında ne düşünüyorsun?"
+        ],
+        'az': [
+            "Bəs sən məni sevirsən?",
+            "Nə gözəl! Danış görək sevgi nədir səncə?",
+            "Əla! Bəs sevgi haqqında nə düşünürsən?"
+        ]
+    }
+}
 
 # ==================== ABİ'YE ÖZEL SAMİMİ CEVAPLAR ====================
 abi_cevaplari = {
@@ -250,8 +326,16 @@ sohbet_cevaplari_az = [
 ]
 
 # ==================== DİYALOG CEVABI GETİR ====================
-def get_dialog_response(kategori, lang, is_abi=False, kullanici_adi=None, user_id=None):
-    """Kategoriye göre rastgele cevap döndür (tekrarsız)"""
+def get_dialog_response(kategori, lang, is_abi=False, kullanici_adi=None, user_id=None, baglam=None):
+    """Kategoriye göre rastgele cevap döndür (tekrarsız ve bağlamlı)"""
+    
+    # Önce bağlam kontrolü - eğer aynı kategoride devam ediyorsak özel cevaplar kullan
+    if baglam and baglam.get('son_kategori') == kategori and baglam.get('konusma_sayisi', 0) > 1:
+        # Aynı konuda 2. veya daha fazla mesaj
+        devam_anahtari = f"{kategori}_devam"
+        if devam_anahtari in baglam_cevaplari:
+            if lang in baglam_cevaplari[devam_anahtari]:
+                return random.choice(baglam_cevaplari[devam_anahtari][lang])
     
     # Abi'ye özel cevaplar
     if is_abi and kategori in abi_cevaplari:
@@ -512,10 +596,10 @@ async def help_komutu(ctx):
     lang = detect_language(ctx.message.content)
     if lang == 'tr':
         embed = discord.Embed(title="🌸 **SNOK Bot** 🌸", description="🤔 **Help** yerine **!yardım** yazmalısın! 🎀", color=discord.Color.pink())
-        embed.set_footer(text="SNOK v11.1 - 2000+ Diyalog")
+        embed.set_footer(text="SNOK v12.0 - 2000+ Diyalog")
     else:
         embed = discord.Embed(title="🌸 **SNOK Bot** 🌸", description="🤔 **Help** yerine **!kömək** yazmalısan! 🎀", color=discord.Color.pink())
-        embed.set_footer(text="SNOK v11.1 - 2000+ Dialoq")
+        embed.set_footer(text="SNOK v12.0 - 2000+ Dialoq")
     await ctx.send(embed=embed)
 
 # ==================== YARDIM KOMUTU ====================
@@ -542,7 +626,7 @@ async def yardim(ctx):
                 "💬 **Sohbet Özelliklerim:**\n"
                 "• **500+ soru tipi** (yazım hatalarına toleranslı!)\n"
                 "• **2000+ farklı cevap**\n"
-                "• **Konuşma hafızası** (bağlam hatırlar)\n"
+                "• **Konuşma hafızası** (bağlam hatırlar, akışa göre cevap verir)\n"
                 "• **Duygu durumu** (mutlu, üzgün, şaşkın)\n"
                 "• Adını söylersen seni tanırım!\n"
                 "• Hızlı mesaj atarsan uyarırım 🍬\n"
@@ -562,9 +646,9 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         if is_abi:
-            embed.set_footer(text="SNOK v11.1 - 2000+ Diyalog | Hoş geldin Abi! 👑")
+            embed.set_footer(text="SNOK v12.0 - 2000+ Diyalog | Hoş geldin Abi! 👑")
         else:
-            embed.set_footer(text="SNOK v11.1 - 2000+ Diyalog")
+            embed.set_footer(text="SNOK v12.0 - 2000+ Diyalog")
     else:
         embed = discord.Embed(
             title="🌸 **SNOK Bot - 2000+ Dialoq** 🌸",
@@ -583,7 +667,7 @@ async def yardim(ctx):
                 "💬 **Söhbət Xüsusiyyətlərim:**\n"
                 "• **500+ sual tipi** (yazı səhvlərinə dözümlü!)\n"
                 "• **2000+ fərqli cavab**\n"
-                "• **Söhbət yaddaşı** (kontekst xatırlayır)\n"
+                "• **Söhbət yaddaşı** (kontekst xatırlayır, axışa görə cavab verir)\n"
                 "• **Əhval durumu** (xoşbəxt, kədərli, təəccüblü)\n"
                 "• Adını söyləsən səni tanıyıram!\n"
                 "• Sürətli mesaj yazsan xəbərdar edərəm 🍬\n"
@@ -603,9 +687,9 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         if is_abi:
-            embed.set_footer(text="SNOK v11.1 - 2000+ Dialoq | Xoş gəldin Abi! 👑")
+            embed.set_footer(text="SNOK v12.0 - 2000+ Dialoq | Xoş gəldin Abi! 👑")
         else:
-            embed.set_footer(text="SNOK v11.1 - 2000+ Dialoq")
+            embed.set_footer(text="SNOK v12.0 - 2000+ Dialoq")
 
     embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
     await ctx.send(embed=embed)
@@ -613,19 +697,26 @@ async def yardim(ctx):
 # ==================== ON_MESSAGE ====================
 @bot.event
 async def on_message(message):
+    # ÇİFT MESAJ ENGELLEME - GÜÇLENDİRİLMİŞ VERSİYON
     if not hasattr(bot, 'processed_messages'):
         bot.processed_messages = set()
         bot.processed_messages_cleanup = time.time()
     
+    # 1 dakikada bir cache temizliği
     if time.time() - bot.processed_messages_cleanup > 60:
         bot.processed_messages.clear()
         bot.processed_messages_cleanup = time.time()
     
     message_id = str(message.id)
+    
+    # Eğer bu mesaj daha önce işlendiyse KESİNLİKLE işleme
     if message_id in bot.processed_messages:
         return
+    
+    # Mesajı işaretle
     bot.processed_messages.add(message_id)
     
+    # Bot kendi mesajlarını işleme
     if message.author.bot:
         return
 
@@ -674,14 +765,21 @@ async def on_message(message):
         # Duygu durumunu güncelle
         duygu = konusma_hafizasi.duygu_guncelle(message.author.id, message.content)
         
-        # Cevap al
-        cevap = get_dialog_response(kategori, lang, is_abi, kayitli_isim, message.author.id)
+        # Konuşma bağlamını al
+        son_konusma = konusma_hafizasi.son_konu_ne(message.author.id)
+        baglam = {
+            'son_kategori': son_konusma.get('kategori') if son_konusma else None,
+            'konusma_sayisi': konusma_hafizasi.kac_kez_sordu(message.author.id, kategori) if son_konusma else 0
+        }
+        
+        # Cevap al (bağlamlı)
+        cevap = get_dialog_response(kategori, lang, is_abi, kayitli_isim, message.author.id, baglam)
         
         # Konuşma hafızasına ekle
         konusma_hafizasi.ekle(message.author.id, message.content, cevap, kategori)
         
-        # Takip sorusu ekle
-        if konusma_hafizasi.takip_sorusu_gerekli_mi(message.author.id) and random.random() < 0.3:
+        # Takip sorusu ekle (eğer aynı konuda 2 kez konuşulduysa)
+        if baglam['konusma_sayisi'] >= 2 and random.random() < 0.4:
             takip_sorulari = [
                 "Peki sen ne düşünüyorsun?",
                 "Senin fikrin nedir?",
@@ -756,13 +854,14 @@ if __name__ == "__main__":
     if not token:
         print("❌ HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
-        print("🌸 SNOK v11.1 - 2000+ Diyalog + Abi Özel Modu Aktif! 🎪")
+        print("🌸 SNOK v12.0 - 2000+ Diyalog + Konuşma Akışı Aktif! 🎪")
         print(f"✅ {len(DIYALOG_TR)} Türkçe diyalog kategorisi")
         print(f"✅ {len(DIYALOG_AZ)} Azərbaycanca dialoq kateqoriyası")
         print(f"✅ {soru_matcher.toplam_varyasyon}+ soru varyasyonu")
         print("👑 Abi'ye özel samimi cevaplar eklendi!")
-        print("✅ Konuşma hafızası aktif!")
-        print("✅ Duygu durumu takibi aktif!")
+        print("✅ Konuşma hafızası güçlendirildi!")
+        print("✅ Bağlama göre cevap seçimi aktif!")
         print("✅ Tekrarlayan cevaplar engellendi!")
+        print("✅ Çift mesaj sorunu çözüldü!")
         print("✅ Render'da hostlamaya hazır! 🚀")
         bot.run(token)
