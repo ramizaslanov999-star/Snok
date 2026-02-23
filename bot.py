@@ -57,7 +57,7 @@ app.debug = False
 
 @app.route('/')
 def home():
-    return "Bot calisiyor! SNOK v12.0 - 2000+ Diyalog! 🎪"
+    return "Bot calisiyor! SNOK v13.0 - 2000+ Diyalog! 🎪"
 
 def run_web():
     port = int(os.environ.get('PORT', 10000))
@@ -72,7 +72,7 @@ bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 # SABITLER
 SUNUCU_ID = 1471063348689768523
-ABI_ID = 423889250052734986  # Abi'nin ID'si - kontrol et!
+ABI_ID = 423889250052734986  # Abi'nin ID'si
 SELAM_COOLDOWN = 60
 MESAJ_SAYISI_LIMITI = 5
 ZAMAN_ARALIGI = 3
@@ -91,6 +91,49 @@ konusma_hafizasi = KonusmaHafizasi()
 
 # Son cevapları hatırla (tekrarı önlemek için)
 son_cevaplar = defaultdict(list)
+
+# ==================== KOMUT ŞAKALARI ====================
+komut_sakalari_tr = [
+    "🤖 **Bot savaşları başlamasın!** Ben karışmam.",
+    "🧐 Hmm, bu komut bana ait değil galiba...",
+    "😅 Yanlış botu mu çağırdın acaba?",
+    "🎮 Ben sadece sohbet ederim, komut işlemem.",
+    "🤔 Bu ne şimdi? Ben anlamam.",
+    "😏 Başka bir botla işin var galiba...",
+    "🙈 Duymadım, görmedim, bilmiyorum!",
+    "💬 Ben sadece muhabbet ederim, komut işi bana göre değil.",
+    "😂 Hadi canım sen de, ben o işleri yapmam.",
+    "🧙‍♂️ Bu komutlar bana büyü gibi geliyor.",
+    "🔮 **Fal bakmıyorum!** Komut da yorumlamam.",
+    "🎭 Ben aktör değilim, komut falan bilmem.",
+    "🎪 Burada eğlence var, komut yok!",
+    "🍿 Komutunu al, biraz bekle... (çaktırma izliyorum)",
+    "🎯 Hedefi şaşırdın galiba, başka bota atış yap!",
+    "📡 Sinyal karıştı, anlamadım?",
+    "⚡ Ben elektrikli sohbet makinesiyim, komut okuyucu değil.",
+    "🔄 Yanlış frekans! Tekrar dene."
+]
+
+komut_sakalari_az = [
+    "🤖 **Bot döyüşləri başlamasın!** Mən qarışmaram.",
+    "🧐 Hmm, bu komanda mənə aid deyil yəqin...",
+    "😅 Səhv botu çağırdın acaba?",
+    "🎮 Mən sadəcə söhbət edərəm, komanda işləmərəm.",
+    "🤔 Bu nədir? Mən başa düşmərəm.",
+    "😏 Başqa botla işin var yəqin...",
+    "🙈 Eşitmədim, görmədim, bilmirəm!",
+    "💬 Mən sadəcə söhbət edərəm, komanda işi mənə görə deyil.",
+    "😂 Hadi canım sən də, mən o işləri etmərəm.",
+    "🧙‍♂️ Bu komandalar mənə sehr kimi gəlir.",
+    "🔮 **Fal baxmıram!** Komanda da yozmaram.",
+    "🎭 Mən aktyor deyiləm, komanda filan bilmərəm.",
+    "🎪 Burada əyləncə var, komanda yox!",
+    "🍿 Komandanı al, biraz gözlə... (çaktırma izləyirəm)",
+    "🎯 Hədəfi şaşırdın yəqin, başqa bota atış et!",
+    "📡 Sinyal qarışdı, başa düşmədim?",
+    "⚡ Mən elektrikli söhbət maşınıyam, komanda oxuyucu deyiləm.",
+    "🔄 Səhv tezlik! Təkrar cəhd et."
+]
 
 # ==================== KONUŞMA AKIŞI İÇİN BAĞLAM CEVAPLARI ====================
 baglam_cevaplari = {
@@ -596,10 +639,10 @@ async def help_komutu(ctx):
     lang = detect_language(ctx.message.content)
     if lang == 'tr':
         embed = discord.Embed(title="🌸 **SNOK Bot** 🌸", description="🤔 **Help** yerine **!yardım** yazmalısın! 🎀", color=discord.Color.pink())
-        embed.set_footer(text="SNOK v12.0 - 2000+ Diyalog")
+        embed.set_footer(text="SNOK v13.0 - 2000+ Diyalog")
     else:
         embed = discord.Embed(title="🌸 **SNOK Bot** 🌸", description="🤔 **Help** yerine **!kömək** yazmalısan! 🎀", color=discord.Color.pink())
-        embed.set_footer(text="SNOK v12.0 - 2000+ Dialoq")
+        embed.set_footer(text="SNOK v13.0 - 2000+ Dialoq")
     await ctx.send(embed=embed)
 
 # ==================== YARDIM KOMUTU ====================
@@ -631,7 +674,8 @@ async def yardim(ctx):
                 "• Adını söylersen seni tanırım!\n"
                 "• Hızlı mesaj atarsan uyarırım 🍬\n"
                 "• Büyük harfle yazarsan uyarırım 🔇\n"
-                "• Küfür edersen üzülürüm 🥺\n\n"
+                "• Küfür edersen üzülürüm 🥺\n"
+                "• Diğer botların komutlarına arada bir şaka yaparım! 🎭\n\n"
                 "🌺 **Sorabileceğin Şeyler (30+ kategori!):**\n"
                 "• Merhaba • Nasılsın • Ne yapıyorsun • Nerelisin • Kaç yaşındasın\n"
                 "• Evli misin • Cinsiyetin ne • Kimsin • Bot musun • Beni seviyor musun\n"
@@ -646,9 +690,9 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         if is_abi:
-            embed.set_footer(text="SNOK v12.0 - 2000+ Diyalog | Hoş geldin Abi! 👑")
+            embed.set_footer(text="SNOK v13.0 - 2000+ Diyalog | Hoş geldin Abi! 👑")
         else:
-            embed.set_footer(text="SNOK v12.0 - 2000+ Diyalog")
+            embed.set_footer(text="SNOK v13.0 - 2000+ Diyalog")
     else:
         embed = discord.Embed(
             title="🌸 **SNOK Bot - 2000+ Dialoq** 🌸",
@@ -672,7 +716,8 @@ async def yardim(ctx):
                 "• Adını söyləsən səni tanıyıram!\n"
                 "• Sürətli mesaj yazsan xəbərdar edərəm 🍬\n"
                 "• Böyük hərflə yazsan xəbərdar edərəm 🔇\n"
-                "• Söyüş etsən üzülərəm 🥺\n\n"
+                "• Söyüş etsən üzülərəm 🥺\n"
+                "• Digər botların komandalarına arabir zarafat edərəm! 🎭\n\n"
                 "🌺 **Soruşa Biləcəyin Şeylər (30+ kateqoriya!):**\n"
                 "• Salam • Necəsən • Nə edirsən • Hardasan • Neçə yaşın var\n"
                 "• Evli sən • Cinsiyyətin nə • Kimsən • Botsan • Məni sevirsenmi\n"
@@ -687,39 +732,60 @@ async def yardim(ctx):
             color=discord.Color.pink()
         )
         if is_abi:
-            embed.set_footer(text="SNOK v12.0 - 2000+ Dialoq | Xoş gəldin Abi! 👑")
+            embed.set_footer(text="SNOK v13.0 - 2000+ Dialoq | Xoş gəldin Abi! 👑")
         else:
-            embed.set_footer(text="SNOK v12.0 - 2000+ Dialoq")
+            embed.set_footer(text="SNOK v13.0 - 2000+ Dialoq")
 
     embed.set_thumbnail(url=ctx.guild.icon.url if ctx.guild.icon else None)
     await ctx.send(embed=embed)
 
-# ==================== ON_MESSAGE ====================
+# ==================== ON_MESSAGE (YENİ VERSİYON) ====================
 @bot.event
 async def on_message(message):
-    # ÇİFT MESAJ ENGELLEME - KESİN ÇÖZÜM
+    # ÇİFT MESAJ ENGELLEME
     if not hasattr(bot, 'processed_messages'):
-        bot.processed_messages = {}
+        bot.processed_messages = set()
         bot.processed_messages_cleanup = time.time()
     
-    # 30 saniyede bir cache temizliği
-    if time.time() - bot.processed_messages_cleanup > 30:
+    if time.time() - bot.processed_messages_cleanup > 60:
         bot.processed_messages.clear()
         bot.processed_messages_cleanup = time.time()
     
     message_id = str(message.id)
-    
-    # Eğer bu mesaj daha önce işlendiyse KESİNLİKLE işleme
     if message_id in bot.processed_messages:
-        print(f"Çift mesaj engellendi: {message_id}")
         return
+    bot.processed_messages.add(message_id)
     
-    # Mesajı işaretle
-    bot.processed_messages[message_id] = time.time()
-    
-    # Bot kendi mesajlarını işleme
     if message.author.bot:
         return
+
+    # ===== ABİ KONTROLÜ - Abi'ye ASLA TEPKİ VERME =====
+    if message.author.id == ABI_ID:
+        # Abi'nin mesajlarını işleme (sadece komutlarını çalıştır)
+        await bot.process_commands(message)
+        return
+
+    # ===== DİĞER BOTLARIN KOMUTLARINA TEPKİ =====
+    if message.content.startswith(('!', '.', '+', '-', '/', '?')):
+        # SNOK'un kendi komutları (bunlar normal çalışsın)
+        snok_komutlari = ['!yardım', '!level', '!fıkra', '!şaka', '!yazitura', '!zar', '!bilgi', '!sarıl']
+        
+        snok_komutu_mu = False
+        for komut in snok_komutlari:
+            if message.content.startswith(komut):
+                snok_komutu_mu = True
+                break
+        
+        if not snok_komutu_mu:
+            # Başka bir botun komutu - %30 ihtimalle şaka yap, %70 sessiz kal
+            if random.random() < 0.3:  # %30 ihtimalle şaka
+                lang = detect_language(message.content)
+                if lang == 'tr':
+                    await message.reply(random.choice(komut_sakalari_tr))
+                else:
+                    await message.reply(random.choice(komut_sakalari_az))
+            # Diğer %70 ihtimalle sessiz kal - hiçbir şey yapma
+            return
 
     son_mesaj_zamani[message.author.id] = time.time()
     
@@ -729,7 +795,7 @@ async def on_message(message):
 
     lang = detect_language(message.content)
     kayitli_isim = kullanici_ismini_getir(message.author.id)
-    is_abi = (message.author.id == ABI_ID)
+    is_abi = (message.author.id == ABI_ID)  # Bu zaten false olacak çünkü abi'yi başta yakaladık
     
     yeni_isim = isim_ogrenme_kontrolu(message.content)
     if yeni_isim:
@@ -824,27 +890,18 @@ async def on_message(message):
         
         # Normal cevap
         if kayitli_isim:
-            if is_abi:
-                await message.reply(f"Abi {kayitli_isim}? {emoji}")
-            else:
-                await message.reply(f"Evet {kayitli_isim}? {emoji}")
+            await message.reply(f"Evet {kayitli_isim}? {emoji}")
         else:
             if random.random() < 0.2:
-                if is_abi:
-                    await message.reply(f"Abi? Adın neydi bu arada? {emoji}")
+                if lang == 'tr':
+                    await message.reply(f"Evet? Adın neydi bu arada? {emoji}")
                 else:
-                    if lang == 'tr':
-                        await message.reply(f"Evet? Adın neydi bu arada? {emoji}")
-                    else:
-                        await message.reply(f"Hə? Adın nə idi bu arada? {emoji}")
+                    await message.reply(f"Hə? Adın nə idi bu arada? {emoji}")
             else:
-                if is_abi:
-                    await message.reply(f"Abi? {emoji}")
+                if lang == 'tr':
+                    await message.reply(f"Evet? {emoji}")
                 else:
-                    if lang == 'tr':
-                        await message.reply(f"Evet? {emoji}")
-                    else:
-                        await message.reply(f"Hə? {emoji}")
+                    await message.reply(f"Hə? {emoji}")
         return
 
     await bot.process_commands(message)
@@ -855,15 +912,12 @@ if __name__ == "__main__":
     if not token:
         print("❌ HATA: DISCORD_TOKEN bulunamadı! .env dosyasını kontrol et.")
     else:
-        print("🌸 SNOK v12.0 - 2000+ Diyalog + Konuşma Akışı Aktif! 🎪")
+        print("🌸 SNOK v13.0 - 2000+ Diyalog + Komut Şakaları Aktif! 🎪")
         print(f"✅ {len(DIYALOG_TR)} Türkçe diyalog kategorisi")
         print(f"✅ {len(DIYALOG_AZ)} Azərbaycanca dialoq kateqoriyası")
         print(f"✅ {soru_matcher.toplam_varyasyon}+ soru varyasyonu")
-        print("👑 Abi'ye özel samimi cevaplar eklendi!")
+        print("👑 Abi'ye asla tepki verilmez!")
+        print("🎭 Diğer botların komutlarına %30 ihtimalle şaka yapılır!")
         print("✅ Konuşma hafızası güçlendirildi!")
-        print("✅ Bağlama göre cevap seçimi aktif!")
-        print("✅ Tekrarlayan cevaplar engellendi!")
-        print("✅ Çift mesaj sorunu çözüldü!")
         print("✅ Render'da hostlamaya hazır! 🚀")
         bot.run(token)
-
